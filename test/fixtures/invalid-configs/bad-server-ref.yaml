@@ -1,0 +1,7 @@
+version: "0.1"
+profiles:
+  test:
+    description: "Test"
+    config_target: generic
+    allowed_servers:
+      - nonexistent_server

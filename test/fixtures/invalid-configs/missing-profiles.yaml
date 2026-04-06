@@ -1,0 +1,7 @@
+version: "0.1"
+mcp_servers:
+  github:
+    url: https://api.github.com/mcp
+    transport: sse
+    credential: null
+    description: "GitHub"

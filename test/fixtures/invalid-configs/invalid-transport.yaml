@@ -1,0 +1,12 @@
+version: "0.1"
+mcp_servers:
+  test:
+    url: https://example.com
+    transport: websocket
+    credential: null
+    description: "Bad transport"
+profiles:
+  default:
+    description: "Default"
+    config_target: generic
+    allowed_servers: [test]

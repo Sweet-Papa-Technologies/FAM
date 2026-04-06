@@ -1,0 +1,6 @@
+version: "0.1"
+profiles:
+  default:
+    description: "Default profile"
+    config_target: generic
+    allowed_servers: []

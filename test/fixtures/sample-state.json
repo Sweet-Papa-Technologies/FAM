@@ -1,0 +1,127 @@
+{
+  "version": "0.1",
+  "last_applied": "2026-04-05T12:00:00Z",
+  "applied_config_hash": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  "credentials": {
+    "github-pat": {
+      "type": "api_key",
+      "exists_in_keychain": true,
+      "last_set": "2026-03-01T10:00:00Z",
+      "rotate_after_days": 90
+    },
+    "anthropic-key": {
+      "type": "api_key",
+      "exists_in_keychain": true,
+      "last_set": "2026-02-15T08:00:00Z"
+    },
+    "google-oauth": {
+      "type": "oauth2",
+      "exists_in_keychain": true,
+      "last_set": "2026-04-01T09:00:00Z",
+      "token_expires": "2026-04-08T09:00:00Z",
+      "refresh_token_exists": true
+    },
+    "jira-oauth": {
+      "type": "oauth2",
+      "exists_in_keychain": true,
+      "last_set": "2026-03-20T14:00:00Z",
+      "token_expires": "2026-04-20T14:00:00Z",
+      "refresh_token_exists": true
+    },
+    "gitlab-token": {
+      "type": "api_key",
+      "exists_in_keychain": true,
+      "last_set": "2026-03-10T11:00:00Z"
+    }
+  },
+  "mcp_servers": {
+    "github": {
+      "transport": "sse",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "credential": "github-pat",
+      "status": "healthy",
+      "last_reachable": "2026-04-05T12:00:00Z",
+      "tools_discovered": ["repos_list", "issues_create", "pr_merge", "repos_get", "issues_list"]
+    },
+    "jira": {
+      "transport": "sse",
+      "url": "https://mcp.atlassian.com/v1/sse",
+      "credential": "jira-oauth",
+      "status": "healthy",
+      "last_reachable": "2026-04-05T12:00:00Z",
+      "tools_discovered": ["issues_search", "issues_create", "issues_update", "boards_list"]
+    },
+    "gitlab": {
+      "transport": "streamable_http",
+      "url": "https://gitlab.example.com/mcp",
+      "credential": "gitlab-token",
+      "status": "healthy",
+      "last_reachable": "2026-04-05T11:55:00Z",
+      "tools_discovered": ["projects_list", "merge_requests_list", "pipelines_list"]
+    },
+    "google-drive": {
+      "transport": "streamable_http",
+      "url": "https://gdrive.mcp.claude.com/mcp",
+      "credential": "google-oauth",
+      "status": "healthy",
+      "last_reachable": "2026-04-05T12:00:00Z",
+      "tools_discovered": ["files_list", "files_get", "files_search"]
+    },
+    "filesystem": {
+      "transport": "stdio",
+      "command": "npx",
+      "credential": null,
+      "status": "healthy",
+      "last_reachable": "2026-04-05T12:00:00Z",
+      "tools_discovered": ["read_file", "list_directory", "write_file", "search_files"]
+    }
+  },
+  "profiles": {
+    "claude-code": {
+      "session_token_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "allowed_servers": ["github", "gitlab", "filesystem"],
+      "tools_exposed_count": 12
+    },
+    "cursor": {
+      "session_token_hash": "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
+      "allowed_servers": ["github", "jira", "gitlab", "google-drive"],
+      "tools_exposed_count": 15
+    },
+    "vscode": {
+      "session_token_hash": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
+      "allowed_servers": ["github", "filesystem"],
+      "tools_exposed_count": 9
+    },
+    "openhands": {
+      "session_token_hash": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
+      "allowed_servers": ["github", "gitlab", "filesystem"],
+      "tools_exposed_count": 12
+    }
+  },
+  "generated_configs": {
+    "claude_code": {
+      "path": "~/.claude/settings.json",
+      "last_written": "2026-04-05T12:00:00Z",
+      "content_hash": "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
+      "strategy": "overwrite"
+    },
+    "cursor": {
+      "path": "~/.cursor/mcp.json",
+      "last_written": "2026-04-05T12:00:00Z",
+      "content_hash": "def456abc123def456abc123def456abc123def456abc123def456abc123def4",
+      "strategy": "import_and_manage"
+    },
+    "vscode": {
+      "path": ".vscode/mcp.json",
+      "last_written": "2026-04-05T12:00:00Z",
+      "content_hash": "789012ghi345789012ghi345789012ghi345789012ghi345789012ghi345789",
+      "strategy": "overwrite"
+    },
+    "openhands": {
+      "path": "~/.openhands/config.toml",
+      "last_written": "2026-04-05T12:00:00Z",
+      "content_hash": "jkl678mno901jkl678mno901jkl678mno901jkl678mno901jkl678mno901jkl6",
+      "strategy": "overwrite"
+    }
+  }
+}

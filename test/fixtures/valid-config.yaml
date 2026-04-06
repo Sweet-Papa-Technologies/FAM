@@ -1,0 +1,208 @@
+# fam.yaml — FoFo Agent Manager Configuration
+# This is the single source of truth for all your AI agent infrastructure.
+
+version: "0.1"
+
+# ─── Global Settings ────────────────────────────────────────────
+settings:
+  daemon:
+    port: 7865
+    socket: ~/.fam/agent.sock
+    auto_start: true
+  audit:
+    enabled: true
+    retention_days: 90
+    export_format: json
+  sync:
+    enabled: false
+    method: git
+
+# ─── Credentials ────────────────────────────────────────────────
+# Secrets are stored in the OS keychain, NOT in this file.
+# This section declares what credentials exist and how to obtain them.
+# `fam secret set github-pat` stores the actual value securely.
+
+credentials:
+  github-pat:
+    type: api_key
+    description: "GitHub Personal Access Token"
+    env_var: GITHUB_TOKEN
+    rotate_after_days: 90
+
+  anthropic-key:
+    type: api_key
+    description: "Anthropic API Key"
+    env_var: ANTHROPIC_API_KEY
+
+  google-oauth:
+    type: oauth2
+    description: "Google Workspace OAuth"
+    provider: google
+    client_id: ${GOOGLE_CLIENT_ID}
+    scopes:
+      - https://www.googleapis.com/auth/drive.readonly
+      - https://www.googleapis.com/auth/calendar.readonly
+
+  jira-oauth:
+    type: oauth2
+    description: "Jira Cloud OAuth"
+    provider: atlassian
+    client_id: ${JIRA_CLIENT_ID}
+    scopes:
+      - read:jira-work
+      - write:jira-work
+
+  gitlab-token:
+    type: api_key
+    description: "Stanford GitLab PAT"
+    env_var: GITLAB_TOKEN
+
+# ─── MCP Servers ────────────────────────────────────────────────
+# These are the upstream MCP servers FAM proxies to.
+# Each gets a namespace (e.g., localhost:7865/github/...)
+
+mcp_servers:
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    transport: sse
+    credential: github-pat
+    description: "GitHub repos, issues, PRs"
+
+  jira:
+    url: https://mcp.atlassian.com/v1/sse
+    transport: sse
+    credential: jira-oauth
+    description: "Jira issue tracking"
+
+  gitlab:
+    url: https://gitlab.example.com/mcp
+    transport: streamable_http
+    credential: gitlab-token
+    description: "Stanford GitLab"
+
+  google-drive:
+    url: https://gdrive.mcp.claude.com/mcp
+    transport: streamable_http
+    credential: google-oauth
+    description: "Google Drive access"
+
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/forrester/projects"]
+    transport: stdio
+    description: "Local filesystem access"
+
+  n8n:
+    url: http://localhost:5678/mcp
+    transport: sse
+    credential: null
+    description: "Local n8n workflow engine"
+
+# ─── Agent Tool Profiles ────────────────────────────────────────
+# Define which tools can access what.
+# FAM generates tool-specific config files from these profiles.
+
+profiles:
+  claude-code:
+    description: "Claude Code — primary coding agent"
+    config_target: claude_code
+    model: claude-sonnet-4
+    allowed_servers:
+      - github
+      - gitlab
+      - filesystem
+      - n8n
+    denied_servers:
+      - jira
+    env_inject:
+      ANTHROPIC_API_KEY: credential:anthropic-key
+
+  cursor:
+    description: "Cursor IDE"
+    config_target: cursor
+    allowed_servers:
+      - github
+      - jira
+      - gitlab
+      - google-drive
+    max_tools: 35
+
+  vscode:
+    description: "VS Code with Copilot"
+    config_target: vscode
+    allowed_servers:
+      - github
+      - filesystem
+
+  openhands:
+    description: "OpenHands coding agent"
+    config_target: openhands
+    allowed_servers:
+      - github
+      - gitlab
+      - filesystem
+    env_inject:
+      LLM_API_KEY: credential:anthropic-key
+      LLM_MODEL: claude-sonnet-4
+
+  paperclip:
+    description: "Paperclip CEO agent — FoFo Art automation"
+    config_target: generic
+    allowed_servers:
+      - n8n
+    denied_servers:
+      - github
+      - gitlab
+
+# ─── Config Generators ──────────────────────────────────────────
+generators:
+  claude_code:
+    output: ~/.claude/settings.json
+    format: claude_mcp_config
+
+  cursor:
+    output: ~/.cursor/mcp.json
+    format: cursor_mcp_config
+
+  vscode:
+    output: .vscode/mcp.json
+    format: vscode_mcp_config
+
+  openhands:
+    output: ~/.openhands/config.toml
+    format: openhands_config
+
+  generic:
+    output: ~/.fam/configs/${profile_name}.json
+    format: generic_mcp_list
+
+# ─── Native Tools ────────────────────────────────────────────────
+native_tools:
+  log_action:
+    enabled: true
+    description: "Agents report significant actions for audit trail"
+  whoami:
+    enabled: true
+    description: "Returns caller's profile, allowed servers, permissions"
+  list_servers:
+    enabled: true
+    description: "Returns available MCP servers for caller's profile"
+  health:
+    enabled: true
+    description: "Daemon and server reachability status"
+
+# ─── Instruction File Generation ────────────────────────────────
+instructions:
+  enabled: true
+  output_dir: ~/.fam/instructions/
+  per_profile:
+    paperclip:
+      extra_context: |
+        You are the Paperclip CEO agent for FoFo Art automation.
+        Use n8n workflows for image generation and fulfillment.
+        Log all significant actions via fam.log_action.
+    claude-code:
+      inject_into: AGENTS.md
+      extra_context: |
+        You are working on Stanford EED and SPT projects.
+        Use GitLab for Stanford repos, GitHub for SPT repos.

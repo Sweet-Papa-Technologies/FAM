@@ -10,7 +10,7 @@
 > **Author:** Forrester Terry
 > **Version:** 0.1-draft
 > **Last updated:** 2026-04-06
-> **Status:** Design phase — pending peer review
+> **Status:** approved
 
 ---
 
