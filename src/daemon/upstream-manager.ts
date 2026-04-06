@@ -107,7 +107,7 @@ export class UpstreamManager {
     })
 
     const client = new Client(
-      { name: `fam-http-${namespace}`, version: '0.1.0' },
+      { name: `fam-http-${namespace}`, version: '1.0.0' },
       { capabilities: {} },
     )
 

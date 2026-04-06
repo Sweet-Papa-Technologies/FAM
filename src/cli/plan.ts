@@ -74,7 +74,7 @@ export function registerPlanCommand(program: Command): void {
         const useColor = globalOpts.color !== false
         const useJson = globalOpts.json === true
 
-        console.log(chalk.bold('\nFAM v0.1.0 -- Planning changes...\n'))
+        console.log(chalk.bold('\nFAM v1.0.0 -- Planning changes...\n'))
 
         const { diff, formatted } = runPlan(configPath, famDir)
 

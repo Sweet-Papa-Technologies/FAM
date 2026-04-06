@@ -5,7 +5,9 @@
       "Bash(npx vitest:*)",
       "Bash(echo \"--- TEST EXIT: $? ---\")",
       "Bash(npx eslint:*)",
-      "WebFetch(domain:opencode.ai)"
+      "WebFetch(domain:opencode.ai)",
+      "Bash(./test.opencode.sh:*)",
+      "WebSearch"
     ]
   }
 }

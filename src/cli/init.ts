@@ -262,7 +262,7 @@ export function registerInitCommand(program: Command): void {
           process.exit(1)
         }
 
-        console.log(chalk.bold('\nFAM v0.1.0 -- Initialize\n'))
+        console.log(chalk.bold('\nFAM v1.0.0 -- Initialize\n'))
 
         // 2. Prompt: "Which tools do you use?"
         const selectedTools = await checkbox({

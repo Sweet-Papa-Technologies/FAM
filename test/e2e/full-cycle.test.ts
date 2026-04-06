@@ -285,7 +285,7 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
   it('6. /health returns minimal info without auth', async () => {
     const health = await healthCheck()
     expect(health.status).toBe('ok')
-    expect(health.version).toBe('0.1.0')
+    expect(health.version).toBe('1.0.0')
     // Should NOT contain server details when unauthenticated
     expect(health).not.toHaveProperty('servers')
     expect(health).not.toHaveProperty('profiles')
@@ -364,7 +364,7 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
     const text = result.content[0].text
     const health = JSON.parse(text)
     expect(health.daemon.status).toBe('healthy')
-    expect(health.daemon.version).toBe('0.1.0')
+    expect(health.daemon.version).toBe('1.0.0')
   })
 
   it('13. fam__list_servers shows filesystem for test-profile', async () => {

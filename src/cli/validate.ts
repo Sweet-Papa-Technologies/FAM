@@ -239,7 +239,7 @@ export function registerValidateCommand(program: Command): void {
         const configPath = resolve(globalOpts.config as string ?? './fam.yaml')
         const useJson = globalOpts.json === true
 
-        console.log(chalk.bold('\nFAM v0.1.0 -- Validating configuration...\n'))
+        console.log(chalk.bold('\nFAM v1.0.0 -- Validating configuration...\n'))
 
         const allChecks: CheckResult[] = []
 

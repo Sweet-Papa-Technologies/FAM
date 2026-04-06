@@ -88,7 +88,7 @@ export class StdioPool {
     })
 
     const client = new Client(
-      { name: `fam-stdio-${namespace}`, version: '0.1.0' },
+      { name: `fam-stdio-${namespace}`, version: '1.0.0' },
       { capabilities: {} },
     )
 

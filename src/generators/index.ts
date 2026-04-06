@@ -23,6 +23,13 @@ export { generateVSCodeConfig } from './vscode.js'
 export { generateOpenHandsConfig } from './openhands.js'
 export { generateOpenCodeConfig } from './opencode.js'
 export { generateGenericConfig } from './generic.js'
+export { generateWindsurfConfig } from './windsurf.js'
+export { generateZedConfig } from './zed.js'
+export { generateClineConfig } from './cline.js'
+export { generateRooCodeConfig } from './roo-code.js'
+export { generateGeminiCliConfig } from './gemini-cli.js'
+export { generateGithubCopilotConfig } from './github-copilot.js'
+export { generateAmazonQConfig } from './amazon-q.js'
 export { generateInstructionFile } from './instructions.js'
 
 // ─── Merge Utilities ──────────────────────────────────────────────
@@ -42,6 +49,13 @@ import { generateVSCodeConfig } from './vscode.js'
 import { generateOpenHandsConfig } from './openhands.js'
 import { generateOpenCodeConfig } from './opencode.js'
 import { generateGenericConfig } from './generic.js'
+import { generateWindsurfConfig } from './windsurf.js'
+import { generateZedConfig } from './zed.js'
+import { generateClineConfig } from './cline.js'
+import { generateRooCodeConfig } from './roo-code.js'
+import { generateGeminiCliConfig } from './gemini-cli.js'
+import { generateGithubCopilotConfig } from './github-copilot.js'
+import { generateAmazonQConfig } from './amazon-q.js'
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
 
@@ -62,4 +76,18 @@ export const generators: Record<string, (input: GeneratorInput) => GeneratorOutp
   opencode_config: generateOpenCodeConfig,
   generic: generateGenericConfig,
   generic_mcp_list: generateGenericConfig,
+  windsurf: generateWindsurfConfig,
+  windsurf_mcp_config: generateWindsurfConfig,
+  zed: generateZedConfig,
+  zed_config: generateZedConfig,
+  cline: generateClineConfig,
+  cline_mcp_config: generateClineConfig,
+  roo_code: generateRooCodeConfig,
+  roo_code_mcp_config: generateRooCodeConfig,
+  gemini_cli: generateGeminiCliConfig,
+  gemini_mcp_config: generateGeminiCliConfig,
+  github_copilot: generateGithubCopilotConfig,
+  github_copilot_mcp_config: generateGithubCopilotConfig,
+  amazon_q: generateAmazonQConfig,
+  amazon_q_config: generateAmazonQConfig,
 }

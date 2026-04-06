@@ -206,7 +206,7 @@ describe('Native Tools', () => {
 
       expect(data.daemon).toBeDefined()
       expect(data.daemon.status).toBe('healthy')
-      expect(data.daemon.version).toBe('0.1.0')
+      expect(data.daemon.version).toBe('1.0.0')
       expect(data.daemon.uptime_seconds).toBeGreaterThan(0)
     })
 

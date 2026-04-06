@@ -7,6 +7,7 @@
 
 import { readFileSync, writeFileSync, unlinkSync, existsSync, openSync, closeSync, writeSync, chmodSync } from 'node:fs'
 import { constants as fsConstants } from 'node:fs'
+import { fork } from 'node:child_process'
 import type { FastifyInstance } from 'fastify'
 import type { FamConfig } from '../config/types.js'
 import type { SessionStore } from '../config/types.js'
@@ -50,6 +51,21 @@ export async function startDaemon(
     configPath?: string
   },
 ): Promise<void> {
+  // Background daemonization: fork a detached child and exit parent
+  if (!options.foreground) {
+    const child = fork(process.argv[1], [
+      'daemon', 'start', '--foreground',
+      '--config', deps.configPath ?? './fam.yaml',
+    ], {
+      detached: true,
+      stdio: 'ignore',
+      env: { ...process.env, FAM_HOME: process.env.FAM_HOME },
+    })
+    child.unref()
+    console.log(`FAM daemon started in background (PID ${child.pid})`)
+    return  // Parent exits, child continues
+  }
+
   const startTime = Date.now()
 
   // 1. Atomic PID file creation (O_EXCL prevents TOCTOU race)

@@ -454,7 +454,7 @@ export function registerApplyCommand(program: Command): void {
         const famDir = expandTilde(globalOpts.famDir as string ?? '~/.fam')
         const useColor = globalOpts.color !== false
 
-        console.log(chalk.bold('\nFAM v0.1.0 -- Applying configuration...\n'))
+        console.log(chalk.bold('\nFAM v1.0.0 -- Applying configuration...\n'))
 
         // 1. Run plan
         const config = parseConfig(configPath)

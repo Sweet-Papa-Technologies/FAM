@@ -14,7 +14,7 @@ const program = new Command()
 program
   .name('fam')
   .description('FoFo Agent Manager -- One config. Every agent.')
-  .version('0.1.0')
+  .version('1.0.0')
 
 // Global options
 program

@@ -172,7 +172,7 @@ export async function createDaemon(
             },
             serverInfo: {
               name: 'fam',
-              version: '0.1.0',
+              version: '1.0.0',
             },
           },
         })
@@ -203,7 +203,7 @@ export async function createDaemon(
       // Unauthenticated: minimal response
       return reply.status(200).send({
         status: 'ok',
-        version: '0.1.0',
+        version: '1.0.0',
       })
     }
 
@@ -219,7 +219,7 @@ export async function createDaemon(
     return reply.status(allHealthy ? 200 : 503).send({
       status: allHealthy ? 'healthy' : 'degraded',
       uptime_ms: uptimeMs,
-      version: '0.1.0',
+      version: '1.0.0',
       servers: allServers,
       profiles: auth.getProfiles(),
       tool_count: proxy.handleToolsList(auth.getProfiles()[0] ?? '').length,

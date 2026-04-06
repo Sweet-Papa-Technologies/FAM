@@ -63,20 +63,7 @@ export function registerDaemonCommand(program: Command): void {
 
         console.log(chalk.dim(`Starting FAM daemon on port ${port}...`))
 
-        if (!opts.foreground) {
-          // MVP: Always run in foreground.
-          // True background daemonization with TypeScript/ESM is complex
-          // and will be added in a future release.
-          console.log(
-            chalk.yellow(
-              'Note: Running in foreground. Use Ctrl+C to stop.\n' +
-                'For background operation, use a process manager (launchd/systemd)\n' +
-                'or run: nohup fam daemon start --foreground &',
-            ),
-          )
-        }
-
-        await startDaemon(config, { foreground: true }, { vault, audit, configPath })
+        await startDaemon(config, { foreground: opts.foreground ?? false }, { vault, audit, configPath })
 
         // startDaemon blocks in foreground mode; this line is reached
         // only if it exits or the mode is non-foreground.
@@ -136,16 +123,7 @@ export function registerDaemonCommand(program: Command): void {
 
         console.log(chalk.dim(`Restarting FAM daemon on port ${port}...`))
 
-        if (!opts.foreground) {
-          console.log(
-            chalk.yellow(
-              'Note: Running in foreground. Use Ctrl+C to stop.\n' +
-                'For background operation, use a process manager (launchd/systemd).',
-            ),
-          )
-        }
-
-        await startDaemon(config, { foreground: true }, { vault, audit, configPath })
+        await startDaemon(config, { foreground: opts.foreground ?? false }, { vault, audit, configPath })
 
         console.log(chalk.green(`FAM daemon restarted on port ${port}.`))
       } catch (err) {

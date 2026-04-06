@@ -1,0 +1,11 @@
+src/
+test/
+docs/
+fam.yaml
+tsconfig.json
+vitest.config.ts
+.eslintrc.cjs
+.prettierrc
+.github/
+.claude/
+*.sh

@@ -249,7 +249,7 @@ function handleHealth(deps: NativeToolDeps): McpResult {
     daemon: {
       status: 'healthy',
       uptime_seconds: uptimeSeconds,
-      version: '0.1.0',
+      version: '1.0.0',
     },
     servers: Object.fromEntries(
       Object.entries(serverStatuses).map(([ns, info]) => [
