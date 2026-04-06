@@ -5,7 +5,7 @@
  * Based on DESIGN.md Section 6.6.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, chmodSync } from 'node:fs'
 import { existsSync } from 'node:fs'
 import { Command } from 'commander'
 import chalk from 'chalk'
@@ -37,6 +37,7 @@ function loadSessions(): SessionStore {
 function writeSessions(store: SessionStore): void {
   ensureFamDir()
   writeFileSync(SESSIONS_FILE, JSON.stringify(store, null, 2) + '\n', 'utf-8')
+  chmodSync(SESSIONS_FILE, 0o600)
 }
 
 /**

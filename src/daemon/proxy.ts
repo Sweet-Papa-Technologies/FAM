@@ -131,7 +131,7 @@ export class McpProxy {
         return {
           content: [{
             type: 'text',
-            text: `Credential '${credentialName}' not found. Run: fam secret set ${credentialName}`,
+            text: 'Server authentication not configured. Contact your administrator.',
           }],
           isError: true,
         }

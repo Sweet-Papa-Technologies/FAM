@@ -8,7 +8,7 @@
  * The actual interactive prompt (I/O/S choice) lives in the CLI layer.
  */
 
-import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, copyFileSync, existsSync, chmodSync } from 'node:fs'
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -80,6 +80,7 @@ export function detectExistingConfig(targetPath: string): DetectResult {
 export function createBackup(targetPath: string): string {
   const backupPath = `${targetPath}.pre-fam`
   copyFileSync(targetPath, backupPath)
+  chmodSync(backupPath, 0o600)
   return backupPath
 }
 
@@ -115,4 +116,5 @@ export function applyMergeStrategy(
   }
 
   writeFileSync(targetPath, famContent, 'utf-8')
+  chmodSync(targetPath, 0o600)
 }

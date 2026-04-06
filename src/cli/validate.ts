@@ -22,6 +22,7 @@ import { parseConfig, expandTilde } from '../config/index.js'
 import type { FamConfig, ProfileConfig } from '../config/index.js'
 import { KeychainVault } from '../vault/index.js'
 import { FamError } from '../utils/errors.js'
+import { validateOutputPath } from '../utils/paths.js'
 
 // ---- Types ------------------------------------------------------------------
 
@@ -90,6 +91,15 @@ function checkOutputPaths(config: FamConfig): CheckResult[] {
   for (const [name, gen] of Object.entries(config.generators)) {
     const outputPath = expandTilde(gen.output)
     const dir = dirname(outputPath)
+
+    // Path traversal / blocked-directory check
+    try {
+      validateOutputPath(gen.output)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      results.push({ status: 'fail', label: `Output path safe: ${name}`, detail: msg })
+      continue
+    }
 
     try {
       accessSync(dir, constants.W_OK)

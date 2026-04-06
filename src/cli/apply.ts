@@ -17,7 +17,7 @@
 
 import { Command } from 'commander'
 import { resolve } from 'node:path'
-import { existsSync, writeFileSync, mkdirSync } from 'node:fs'
+import { existsSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import chalk from 'chalk'
 import { confirm, select, password } from '@inquirer/prompts'
@@ -53,7 +53,7 @@ import type { GeneratorOutput } from '../generators/index.js'
 import { getDaemonStatus } from '../daemon/index.js'
 import { generateToken, hashToken } from '../utils/crypto.js'
 import { FamError } from '../utils/errors.js'
-import { AUDIT_DB, SESSIONS_FILE } from '../utils/paths.js'
+import { AUDIT_DB, SESSIONS_FILE, validateOutputPath } from '../utils/paths.js'
 
 import type { SessionStore } from '../config/index.js'
 
@@ -87,6 +87,7 @@ async function loadSessionStore(): Promise<SessionStore> {
 
 function writeSessionStore(store: SessionStore): void {
   writeFileSync(SESSIONS_FILE, JSON.stringify(store, null, 2) + '\n', 'utf-8')
+  chmodSync(SESSIONS_FILE, 0o600)
 }
 
 // ---- Core apply logic -------------------------------------------------------
@@ -196,6 +197,7 @@ async function executeApply(
 
     if (isNew) {
       // Check for existing config and handle I/O/S
+      validateOutputPath(targetPath)
       const detection = detectExistingConfig(targetPath)
 
       if (detection.exists && !dryRun) {
@@ -247,9 +249,11 @@ async function executeApply(
         }
       } else if (!dryRun) {
         // No existing file -- write directly
+        validateOutputPath(targetPath)
         const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))
         if (dir) mkdirSync(dir, { recursive: true })
         writeFileSync(targetPath, output.content, 'utf-8')
+        chmodSync(targetPath, 0o600)
         generatedConfigs[genName] = {
           path: targetPath,
           last_written: new Date().toISOString(),
@@ -262,9 +266,11 @@ async function executeApply(
     } else {
       // Subsequent run: upsert silently
       if (!dryRun) {
+        validateOutputPath(targetPath)
         const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))
         if (dir) mkdirSync(dir, { recursive: true })
         writeFileSync(targetPath, output.content, 'utf-8')
+        chmodSync(targetPath, 0o600)
         generatedConfigs[genName] = {
           ...generatedConfigs[genName],
           last_written: new Date().toISOString(),
@@ -303,9 +309,11 @@ async function executeApply(
       injectInto: perProfile?.inject_into,
     })
 
+    validateOutputPath(output.path)
     const dir = output.path.substring(0, output.path.lastIndexOf('/'))
     if (dir) mkdirSync(dir, { recursive: true })
     writeFileSync(output.path, output.content, 'utf-8')
+    chmodSync(output.path, 0o600)
   }
 
   // 7. Write state.json

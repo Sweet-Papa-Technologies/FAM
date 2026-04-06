@@ -7,6 +7,7 @@
  * and Section 13.2.
  */
 
+import { timingSafeEqual } from 'node:crypto'
 import { hashToken } from '../utils/crypto.js'
 import type { SessionStore } from '../config/types.js'
 
@@ -47,11 +48,22 @@ export class AuthEngine {
 
     const token = match[1]
     const hash = hashToken(token)
-    const session = this.sessions.get(hash)
-    if (!session) return null
+    const hashBuf = Buffer.from(hash, 'utf-8')
 
-    this.updateLastUsed(hash)
-    return session.profile
+    // Constant-time: always check all entries
+    let found: { profile: string; hash: string } | null = null
+    for (const [storedHash, session] of this.sessions) {
+      const storedBuf = Buffer.from(storedHash, 'utf-8')
+      if (storedBuf.length === hashBuf.length && timingSafeEqual(hashBuf, storedBuf)) {
+        found = { profile: session.profile, hash: storedHash }
+      }
+    }
+
+    if (found) {
+      this.updateLastUsed(found.hash)
+      return found.profile
+    }
+    return null
   }
 
   /**
@@ -67,11 +79,22 @@ export class AuthEngine {
     if (!token) return null
 
     const hash = hashToken(token)
-    const session = this.sessions.get(hash)
-    if (!session) return null
+    const hashBuf = Buffer.from(hash, 'utf-8')
 
-    this.updateLastUsed(hash)
-    return session.profile
+    // Constant-time: always check all entries
+    let found: { profile: string; hash: string } | null = null
+    for (const [storedHash, session] of this.sessions) {
+      const storedBuf = Buffer.from(storedHash, 'utf-8')
+      if (storedBuf.length === hashBuf.length && timingSafeEqual(hashBuf, storedBuf)) {
+        found = { profile: session.profile, hash: storedHash }
+      }
+    }
+
+    if (found) {
+      this.updateLastUsed(found.hash)
+      return found.profile
+    }
+    return null
   }
 
   /**

@@ -230,8 +230,7 @@ describe('McpProxy', () => {
       )
 
       expect(result.isError).toBe(true)
-      expect(result.content[0].text).toContain('github-pat')
-      expect(result.content[0].text).toContain('fam secret set')
+      expect(result.content[0].text).toBe('Server authentication not configured. Contact your administrator.')
     })
 
     it('should handle upstream errors gracefully', async () => {

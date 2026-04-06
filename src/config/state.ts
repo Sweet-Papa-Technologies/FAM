@@ -6,7 +6,7 @@
  * corruption from crashes or power loss.
  */
 
-import { readFileSync, writeFileSync, renameSync } from 'node:fs'
+import { readFileSync, writeFileSync, renameSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 
 import type { State } from './types.js'
@@ -66,4 +66,5 @@ export function writeState(famDir: string, state: State): void {
 
   writeFileSync(tmpPath, JSON.stringify(state, null, 2) + '\n', 'utf-8')
   renameSync(tmpPath, statePath)
+  chmodSync(statePath, 0o600)
 }

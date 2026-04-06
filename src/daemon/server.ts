@@ -62,9 +62,27 @@ export async function createDaemon(
 ): Promise<FastifyInstance> {
   const app = Fastify({
     logger: false, // We use our own pino logger
+    bodyLimit: 1_048_576, // 1MB max request body
   })
 
   const { proxy, auth } = deps
+
+  // ─── Simple per-profile rate limiter ──────────────────────────
+  const rateLimits = new Map<string, { count: number; resetAt: number }>()
+  const RATE_LIMIT_MAX = 200       // max calls per window
+  const RATE_LIMIT_WINDOW_MS = 60_000  // 1 minute
+
+  function checkRateLimit(profile: string): boolean {
+    const now = Date.now()
+    const entry = rateLimits.get(profile)
+    if (!entry || now > entry.resetAt) {
+      rateLimits.set(profile, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+      return true
+    }
+    if (entry.count >= RATE_LIMIT_MAX) return false
+    entry.count++
+    return true
+  }
 
   // ─── POST /mcp — MCP JSON-RPC endpoint ────────────────────────
 
@@ -82,6 +100,15 @@ export async function createDaemon(
           code: -32000,
           message: 'Invalid or missing authentication token.',
         },
+      })
+    }
+
+    // 1b. Rate limit check
+    if (!checkRateLimit(profile)) {
+      return reply.status(429).send({
+        jsonrpc: '2.0',
+        id: (request.body as JsonRpcRequest)?.id ?? null,
+        error: { code: -32000, message: 'Rate limit exceeded. Try again later.' },
       })
     }
 
@@ -166,9 +193,21 @@ export async function createDaemon(
 
   // ─── GET /health — Health check endpoint ──────────────────────
 
-  app.get('/health', async (_request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/health', async (request: FastifyRequest, reply: FastifyReply) => {
+    const authHeader = request.headers.authorization
+    const profile = auth.resolveProfile(authHeader)
+
     const uptimeMs = Date.now() - deps.startTime
 
+    if (!profile) {
+      // Unauthenticated: minimal response
+      return reply.status(200).send({
+        status: 'ok',
+        version: '0.1.0',
+      })
+    }
+
+    // Authenticated: full details
     const stdioStatus = deps.stdioPool.getStatus()
     const httpStatus = deps.upstreamManager.getStatus()
     const allServers = { ...stdioStatus, ...httpStatus }

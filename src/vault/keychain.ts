@@ -10,6 +10,7 @@
 
 import { Entry } from '@napi-rs/keyring'
 import type { CredentialVault, CredentialStatus } from './types.js'
+import { VaultError } from '../utils/errors.js'
 
 export class KeychainVault implements CredentialVault {
   private service = 'fam'
@@ -18,8 +19,14 @@ export class KeychainVault implements CredentialVault {
     try {
       const entry = new Entry(this.service, name)
       return entry.getPassword()
-    } catch {
-      return null
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      // "not found" / "No password found" → credential doesn't exist
+      if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('no password')) {
+        return null
+      }
+      // Permission errors and other issues should surface
+      throw new VaultError('KEYCHAIN_ERROR', `Keychain access error for '${name}': ${msg}`)
     }
   }
 

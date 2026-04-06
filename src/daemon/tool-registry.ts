@@ -7,8 +7,10 @@
  */
 
 import type { ToolEntry, ToolDefinition } from './types.js'
+import logger from '../utils/logger.js'
 
 export class ToolRegistry {
+  private static TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-\.]+$/
   private tools: Map<string, ToolEntry> = new Map()
   private profileViews: Map<string, ToolEntry[]> = new Map()
 
@@ -24,6 +26,15 @@ export class ToolRegistry {
    */
   registerUpstreamTools(namespace: string, tools: ToolDefinition[]): void {
     for (const tool of tools) {
+      // Validate tool name — reject names with special chars or namespace separator
+      if (!ToolRegistry.TOOL_NAME_PATTERN.test(tool.name)) {
+        logger.warn({ namespace, toolName: tool.name }, 'Rejected invalid tool name from upstream')
+        continue
+      }
+      if (tool.name.includes('__')) {
+        logger.warn({ namespace, toolName: tool.name }, 'Rejected tool name containing namespace separator')
+        continue
+      }
       const namespacedName = `${namespace}__${tool.name}`
       const entry: ToolEntry = {
         namespacedName,

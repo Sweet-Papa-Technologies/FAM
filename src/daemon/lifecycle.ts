@@ -5,7 +5,8 @@
  * status checks. Based on DESIGN.md Section 11.
  */
 
-import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, unlinkSync, existsSync, openSync, closeSync, writeSync, chmodSync } from 'node:fs'
+import { constants as fsConstants } from 'node:fs'
 import type { FastifyInstance } from 'fastify'
 import type { FamConfig } from '../config/types.js'
 import type { SessionStore } from '../config/types.js'
@@ -51,22 +52,38 @@ export async function startDaemon(
 ): Promise<void> {
   const startTime = Date.now()
 
-  // 1. Check for existing PID file
-  if (existsSync(PID_FILE)) {
-    const pidContent = readFileSync(PID_FILE, 'utf-8').trim()
-    const existingPid = parseInt(pidContent, 10)
+  // 1. Atomic PID file creation (O_EXCL prevents TOCTOU race)
+  const acquirePidFile = (): number => {
+    try {
+      const fd = openSync(PID_FILE, fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY)
+      return fd
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+        // PID file already exists — check if the process is alive
+        const pidContent = readFileSync(PID_FILE, 'utf-8').trim()
+        const existingPid = parseInt(pidContent, 10)
 
-    if (!isNaN(existingPid) && isProcessAlive(existingPid)) {
-      throw new DaemonError(
-        'DAEMON_ALREADY_RUNNING',
-        `Daemon is already running (PID ${existingPid}). Use 'fam daemon stop' first.`,
-      )
+        if (!isNaN(existingPid) && isProcessAlive(existingPid)) {
+          throw new DaemonError(
+            'DAEMON_ALREADY_RUNNING',
+            `Daemon is already running (PID ${existingPid}). Use 'fam daemon stop' first.`,
+          )
+        }
+
+        // Stale PID file — remove and retry
+        logger.warn({ pid: existingPid }, 'Removed stale PID file')
+        unlinkSync(PID_FILE)
+        const fd = openSync(PID_FILE, fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY)
+        return fd
+      }
+      throw err
     }
-
-    // Stale PID file — remove it
-    logger.warn({ pid: existingPid }, 'Removed stale PID file')
-    unlinkSync(PID_FILE)
   }
+
+  const pidFd = acquirePidFile()
+  writeSync(pidFd, String(process.pid))
+  closeSync(pidFd)
+  chmodSync(PID_FILE, 0o644)
 
   // 2. Config is already validated by caller
 
@@ -153,13 +170,16 @@ export async function startDaemon(
   const port = config.settings.daemon.port
   await server.listen({ port, host: '127.0.0.1' })
 
-  // 7. Write PID file
-  writeFileSync(PID_FILE, String(process.pid), 'utf-8')
+  // 7. PID file already written atomically at step 1
 
-  // 8. Register signal handlers
+  // 8. Register signal handlers (with double-shutdown guard)
+  let isShuttingDown = false
   const shutdown = async () => {
+    if (isShuttingDown) return
+    isShuttingDown = true
     logger.info('Shutting down daemon...')
     await gracefulShutdown(server, stdioPool, upstreamManager, audit)
+    process.exit(0)
   }
 
   process.on('SIGTERM', () => void shutdown())

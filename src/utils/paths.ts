@@ -8,7 +8,8 @@
 
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { mkdirSync, existsSync } from 'node:fs'
+import { mkdirSync, existsSync, chmodSync } from 'node:fs'
+import { ConfigError } from './errors.js'
 
 /**
  * Expand a leading `~` in a path to the user's home directory.
@@ -33,7 +34,25 @@ export function getFamDir(): string {
 export function ensureFamDir(): void {
   const dir = getFamDir()
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
+  }
+  chmodSync(dir, 0o700)
+}
+
+/**
+ * Validate that an output path is safe — no traversal and not targeting system directories.
+ */
+export function validateOutputPath(path: string): void {
+  const resolved = resolve(expandTilde(path))
+  if (resolved.includes('..')) {
+    throw new ConfigError('PATH_TRAVERSAL', `Output path contains '..': ${path}`)
+  }
+  // Block writing to obvious sensitive locations
+  const blocked = ['/etc', '/usr', '/bin', '/sbin', '/var', '/tmp', '/root']
+  for (const prefix of blocked) {
+    if (resolved.startsWith(prefix + '/') || resolved === prefix) {
+      throw new ConfigError('PATH_BLOCKED', `Output path targets a system directory: ${path}`)
+    }
   }
 }
 
