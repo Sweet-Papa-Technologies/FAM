@@ -6,7 +6,7 @@
  * and records audit entries. Based on DESIGN.md Sections 3.2 and 7.4.
  */
 
-import type { ToolRegistry } from './tool-registry.js'
+import { ToolRegistry } from './tool-registry.js'
 import type { CredentialVault } from '../vault/types.js'
 import type { IAuditLogger } from '../audit/types.js'
 import type { FamConfig, McpServerConfig } from '../config/types.js'
@@ -197,6 +197,23 @@ export class McpProxy {
    */
   handleToolsList(profile: string): ToolDefinition[] {
     return this.registry.getToolsForProfile(profile)
+  }
+
+  /**
+   * Update the registry and config after a hot-reload.
+   */
+  updateRegistry(newRegistry: ToolRegistry, newConfig: FamConfig): void {
+    this.registry = newRegistry
+    this.config = newConfig
+  }
+
+  /**
+   * Get tool definitions for a specific namespace (used during reload).
+   */
+  getToolsForNamespace(namespace: string): ToolDefinition[] {
+    return this.registry.getToolsForProfile('').filter(
+      (t) => t.name.startsWith(`${namespace}__`),
+    )
   }
 
   /**

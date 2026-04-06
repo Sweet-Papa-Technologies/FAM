@@ -6,10 +6,10 @@
  *  1. Run plan (same diff)
  *  2. If changes and not --yes, prompt for confirmation
  *  3. For new credentials: prompt for values, store via vault
- *  4. Run generators (with I/O/S merge for first-time)
- *  5. Generate session tokens for new profiles
- *  6. Write state.json
- *  7. Generate instruction files (FAM.md per profile)
+ *  4. Generate session tokens for new profiles (needed before generators)
+ *  5. Run generators (with I/O/S merge for first-time)
+ *  6. Generate instruction files (FAM.md per profile)
+ *  7. Write state.json
  *  8. If daemon running, POST /api/v1/reload
  *  9. Log config_change to audit
  * 10. Print summary
@@ -120,12 +120,52 @@ async function executeApply(
     created++
   }
 
-  // 4. Run generators (with I/O/S merge for first-time)
+  // 4. Generate session tokens FIRST (needed by generators for config files)
+  const sessions = await loadSessionStore()
+  const newTokens: Array<{ profile: string; token: string }> = []
+  const profileTokenMap: Record<string, string> = {}
+
+  // Build a lookup of existing tokens: profile name → token value (from prior registrations)
+  // For NEW profiles, generate tokens now so generators can embed them.
+  for (const item of diff.profiles.added) {
+    if (dryRun) {
+      console.log(chalk.dim(`  [dry-run] Would generate session token for: ${item.name}`))
+      profileTokenMap[item.name] = `fam_sk_dry_${'0'.repeat(64)}`
+      created++
+      continue
+    }
+
+    const token = generateToken(item.name)
+    const tokenHash = hashToken(token)
+    sessions.tokens[tokenHash] = {
+      profile: item.name,
+      created: new Date().toISOString(),
+    }
+    newTokens.push({ profile: item.name, token })
+    profileTokenMap[item.name] = token
+    created++
+  }
+
+  if (!dryRun && newTokens.length > 0) {
+    writeSessionStore(sessions)
+  }
+
+  // For existing profiles, look up their token from prior registration.
+  // We can't retrieve the raw token (only hash is stored), so we keep the
+  // existing config content for unchanged profiles. If no token is available
+  // (profile exists but was never registered), use a placeholder and warn.
+  for (const [profileName] of Object.entries(config.profiles)) {
+    if (!profileTokenMap[profileName]) {
+      // Check if there's already a generated config — we'll preserve its content
+      profileTokenMap[profileName] = `<run 'fam register ${profileName}' to generate a token>`
+    }
+  }
+
+  // 5. Run generators (with I/O/S merge for first-time)
   const generatedConfigs: Record<string, GeneratedConfigState> = {
     ...currentState.generated_configs,
   }
 
-  // Process generators referenced by profiles
   const processedGenerators = new Set<string>()
 
   for (const [_profileName, profile] of Object.entries(config.profiles)) {
@@ -142,14 +182,12 @@ async function executeApply(
       continue
     }
 
-    // Build the session token for this profile (we use a temporary one during generation)
-    const token = 'placeholder-for-generation'
     const daemonUrl = `http://127.0.0.1:${config.settings.daemon.port}`
 
     const output: GeneratorOutput = generatorFn({
       profile: { ...profile, name: _profileName },
       settings: config.settings,
-      sessionToken: token,
+      sessionToken: profileTokenMap[_profileName] ?? '',
       daemonUrl,
     })
 
@@ -238,32 +276,7 @@ async function executeApply(
     }
   }
 
-  // 5. Generate session tokens for new profiles
-  const sessions = await loadSessionStore()
-  const newTokens: Array<{ profile: string; token: string }> = []
-
-  for (const item of diff.profiles.added) {
-    if (dryRun) {
-      console.log(chalk.dim(`  [dry-run] Would generate session token for: ${item.name}`))
-      created++
-      continue
-    }
-
-    const token = generateToken(item.name)
-    const tokenHash = hashToken(token)
-    sessions.tokens[tokenHash] = {
-      profile: item.name,
-      created: new Date().toISOString(),
-    }
-    newTokens.push({ profile: item.name, token })
-    created++
-  }
-
-  if (!dryRun && newTokens.length > 0) {
-    writeSessionStore(sessions)
-  }
-
-  // 7. Generate instruction files (FAM.md per profile)
+  // 6. Generate instruction files (FAM.md per profile)
   for (const [profileName, profile] of Object.entries(config.profiles)) {
     if (dryRun) continue
 
@@ -295,7 +308,7 @@ async function executeApply(
     writeFileSync(output.path, output.content, 'utf-8')
   }
 
-  // 6. Write state.json
+  // 7. Write state.json
   if (!dryRun) {
     const newState: State = {
       version: '0.1',

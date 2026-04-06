@@ -46,6 +46,7 @@ export async function startDaemon(
   deps: {
     vault: CredentialVault
     audit: IAuditLogger
+    configPath?: string
   },
 ): Promise<void> {
   const startTime = Date.now()
@@ -146,6 +147,7 @@ export async function startDaemon(
     stdioPool,
     upstreamManager,
     startTime,
+    configPath: deps.configPath,
   })
 
   const port = config.settings.daemon.port

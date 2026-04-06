@@ -6,6 +6,9 @@
  */
 
 import { Command } from 'commander'
+import { writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { platform, homedir } from 'node:os'
 import chalk from 'chalk'
 import { parseConfig } from '../config/index.js'
 import { KeychainVault } from '../vault/index.js'
@@ -73,7 +76,7 @@ export function registerDaemonCommand(program: Command): void {
           )
         }
 
-        await startDaemon(config, { foreground: true }, { vault, audit })
+        await startDaemon(config, { foreground: true }, { vault, audit, configPath })
 
         // startDaemon blocks in foreground mode; this line is reached
         // only if it exits or the mode is non-foreground.
@@ -142,7 +145,7 @@ export function registerDaemonCommand(program: Command): void {
           )
         }
 
-        await startDaemon(config, { foreground: true }, { vault, audit })
+        await startDaemon(config, { foreground: true }, { vault, audit, configPath })
 
         console.log(chalk.green(`FAM daemon restarted on port ${port}.`))
       } catch (err) {
@@ -197,6 +200,120 @@ export function registerDaemonCommand(program: Command): void {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(chalk.red(`Failed to get daemon status: ${msg}`))
+        process.exit(1)
+      }
+    })
+
+  // ── fam daemon install ─────────────────────────────────────────────
+
+  daemon
+    .command('install')
+    .description('Install auto-start configuration (launchd on macOS, systemd on Linux)')
+    .action(() => {
+      try {
+        const os = platform()
+        const famBin = resolve(process.argv[1] ?? 'fam')
+        const configPath = resolve(program.opts().config as string ?? './fam.yaml')
+
+        if (os === 'darwin') {
+          const plistDir = resolve(homedir(), 'Library/LaunchAgents')
+          const plistPath = resolve(plistDir, 'com.sweetpapatech.fam.plist')
+
+          const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.sweetpapatech.fam</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>${famBin}</string>
+    <string>daemon</string>
+    <string>start</string>
+    <string>--foreground</string>
+    <string>--config</string>
+    <string>${configPath}</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${homedir()}/.fam/daemon.log</string>
+  <key>StandardErrorPath</key><string>${homedir()}/.fam/daemon.err</string>
+</dict>
+</plist>
+`
+          mkdirSync(plistDir, { recursive: true })
+          writeFileSync(plistPath, plist, 'utf-8')
+          console.log(chalk.green(`Wrote ${plistPath}`))
+          console.log(chalk.dim(`  Load:   launchctl load ${plistPath}`))
+          console.log(chalk.dim(`  Unload: launchctl unload ${plistPath}`))
+
+        } else if (os === 'linux') {
+          const unitDir = resolve(homedir(), '.config/systemd/user')
+          const unitPath = resolve(unitDir, 'fam.service')
+
+          const unit = `[Unit]
+Description=FAM - FoFo Agent Manager Daemon
+After=network.target
+
+[Service]
+ExecStart=${famBin} daemon start --foreground --config ${configPath}
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+`
+          mkdirSync(unitDir, { recursive: true })
+          writeFileSync(unitPath, unit, 'utf-8')
+          console.log(chalk.green(`Wrote ${unitPath}`))
+          console.log(chalk.dim('  Enable: systemctl --user enable fam'))
+          console.log(chalk.dim('  Start:  systemctl --user start fam'))
+          console.log(chalk.dim('  Status: systemctl --user status fam'))
+
+        } else {
+          console.log(chalk.yellow(`Auto-start not supported on ${os}. Use your OS process manager manually.`))
+          process.exit(1)
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(chalk.red(`Failed to install: ${msg}`))
+        process.exit(1)
+      }
+    })
+
+  // ── fam daemon uninstall ───────────────────────────────────────────
+
+  daemon
+    .command('uninstall')
+    .description('Remove auto-start configuration')
+    .action(() => {
+      try {
+        const os = platform()
+
+        if (os === 'darwin') {
+          const plistPath = resolve(homedir(), 'Library/LaunchAgents/com.sweetpapatech.fam.plist')
+          if (existsSync(plistPath)) {
+            unlinkSync(plistPath)
+            console.log(chalk.green(`Removed ${plistPath}`))
+            console.log(chalk.dim('Run `launchctl unload` first if the agent is loaded.'))
+          } else {
+            console.log(chalk.yellow('No launchd plist found.'))
+          }
+        } else if (os === 'linux') {
+          const unitPath = resolve(homedir(), '.config/systemd/user/fam.service')
+          if (existsSync(unitPath)) {
+            unlinkSync(unitPath)
+            console.log(chalk.green(`Removed ${unitPath}`))
+            console.log(chalk.dim('Run `systemctl --user disable fam` first if enabled.'))
+          } else {
+            console.log(chalk.yellow('No systemd unit found.'))
+          }
+        } else {
+          console.log(chalk.yellow(`Not supported on ${os}.`))
+          process.exit(1)
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(chalk.red(`Failed to uninstall: ${msg}`))
         process.exit(1)
       }
     })

@@ -11,9 +11,15 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import type { FamConfig } from '../config/types.js'
 import type { DaemonDeps } from './types.js'
 import type { McpProxy } from './proxy.js'
-import type { AuthEngine } from './auth.js'
+import { AuthEngine } from './auth.js'
 import type { StdioPool } from './stdio-pool.js'
 import type { UpstreamManager } from './upstream-manager.js'
+import { ToolRegistry } from './tool-registry.js'
+import { getNativeToolEntries } from './native-tools.js'
+import { parseConfig } from '../config/parser.js'
+import type { SessionStore } from '../config/types.js'
+import { readFileSync, existsSync } from 'node:fs'
+import { SESSIONS_FILE } from '../utils/paths.js'
 import logger from '../utils/logger.js'
 
 /**
@@ -25,6 +31,7 @@ export interface ServerDeps extends DaemonDeps {
   stdioPool: StdioPool
   upstreamManager: UpstreamManager
   startTime: number
+  configPath?: string
 }
 
 /**
@@ -191,18 +198,87 @@ export async function createDaemon(
       })
     }
 
-    // In a full implementation, this would:
-    // 1. Re-parse fam.yaml
-    // 2. Validate schema
-    // 3. Diff against running config
-    // 4. Apply changes
-    // For MVP, return success acknowledgment
     logger.info('Config reload requested')
 
-    return reply.status(200).send({
-      success: true,
-      message: 'Config reload requested. Full implementation in v1.',
-    })
+    try {
+      // 1. Re-parse fam.yaml
+      const configPath = deps.configPath
+      if (!configPath) {
+        return reply.status(200).send({
+          success: false,
+          message: 'No config path available for reload.',
+        })
+      }
+
+      const newConfig = parseConfig(configPath)
+
+      // 2. Rebuild tool registry with current upstream tools
+      const newRegistry = new ToolRegistry()
+
+      // Re-register tools from existing pools (tools already discovered)
+      const stdioStatus = deps.stdioPool.getStatus()
+      const httpStatus = deps.upstreamManager.getStatus()
+
+      // We can't re-discover tools without reconnecting, but we can rebuild
+      // profile views from the new config. For tools, copy from current proxy.
+      const currentTools = proxy.handleToolsList('')  // empty profile = get all for rebuild
+      // Actually, re-use the existing registry's tools and just rebuild profile views
+      for (const [ns, info] of Object.entries({ ...stdioStatus, ...httpStatus })) {
+        // Re-register existing upstream tools by querying current registry
+        const tools = deps.proxy.getToolsForNamespace(ns)
+        if (tools.length > 0) {
+          newRegistry.registerUpstreamTools(ns, tools)
+        }
+      }
+      newRegistry.registerNativeTools(getNativeToolEntries())
+
+      // 3. Rebuild per-profile filtered views from new config
+      const profileViews: Record<string, { allowed_servers: string[]; denied_servers?: string[] }> = {}
+      for (const [name, profile] of Object.entries(newConfig.profiles)) {
+        profileViews[name] = {
+          allowed_servers: profile.allowed_servers,
+          denied_servers: profile.denied_servers,
+        }
+      }
+      newRegistry.buildProfileViews(profileViews)
+
+      // 4. Reload sessions
+      let sessionsData: SessionStore = { tokens: {} }
+      try {
+        if (existsSync(SESSIONS_FILE)) {
+          sessionsData = JSON.parse(readFileSync(SESSIONS_FILE, 'utf-8')) as SessionStore
+        }
+      } catch {
+        // Keep empty sessions
+      }
+
+      // Update auth engine and proxy's registry
+      const newAuth = new AuthEngine(sessionsData)
+      deps.proxy.updateRegistry(newRegistry, newConfig)
+      deps.auth = newAuth
+      // Update the auth reference used by the /mcp route
+      Object.assign(proxy, { registry: newRegistry })
+
+      const changes = [
+        `${Object.keys(newConfig.profiles).length} profiles`,
+        `${Object.keys(newConfig.mcp_servers).length} servers`,
+      ]
+
+      logger.info({ changes }, 'Config reloaded successfully')
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Config reloaded.',
+        changes,
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error({ error: msg }, 'Config reload failed')
+      return reply.status(200).send({
+        success: false,
+        message: `Reload failed: ${msg}`,
+      })
+    }
   })
 
   return app
