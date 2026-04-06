@@ -8,3 +8,22 @@ with the following project-specific overrides:
 - All other conventions (TypeScript, testing, linting, security, AI workflow) apply as written
 
 docs/requirements-design.md explains the product vision and feature scope.
+
+## Development Commands
+
+- `npm run dev` — Run CLI in development mode (tsx)
+- `npm run build` — Build for distribution (tsup)
+- `npm run lint` — Lint with ESLint
+- `npm run typecheck` — TypeScript type checking
+- `npm test` — Run all tests
+- `npx tsx src/index.ts <command>` — Run any CLI command in dev
+
+## Key Files
+
+- `src/cli/` — CLI commands (Commander)
+- `src/config/` — YAML schema, parser, state, diff engine
+- `src/daemon/` — Fastify MCP proxy server
+- `src/generators/` — Config file generators
+- `src/vault/` — OS keychain credential management
+- `src/audit/` — SQLite audit logging
+- `src/utils/` — Shared utilities (errors, logger, paths, crypto)

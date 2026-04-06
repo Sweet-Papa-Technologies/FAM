@@ -1,0 +1,48 @@
+version: "0.1"
+
+settings:
+  daemon:
+    port: 7865
+    auto_start: false
+  audit:
+    enabled: true
+    retention_days: 90
+
+credentials:
+  github-pat:
+    type: api_key
+    description: "GitHub Personal Access Token"
+    env_var: GITHUB_TOKEN
+
+mcp_servers:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    transport: stdio
+    description: "Local filesystem access"
+
+profiles:
+  claude-code:
+    description: "Claude Code — primary coding agent"
+    config_target: claude_code
+    allowed_servers:
+      - filesystem
+
+generators:
+  claude_code:
+    output: ~/.claude/settings.json
+    format: claude_mcp_config
+
+native_tools:
+  whoami:
+    enabled: true
+    description: "Returns caller profile and permissions"
+  log_action:
+    enabled: true
+    description: "Report actions for audit trail"
+  list_servers:
+    enabled: true
+    description: "List available MCP servers"
+  health:
+    enabled: true
+    description: "Daemon and server health status"
