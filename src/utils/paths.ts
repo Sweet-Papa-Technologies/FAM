@@ -22,9 +22,14 @@ export function expandTilde(p: string): string {
 }
 
 /**
- * Get the resolved absolute path to the FAM data directory (~/.fam).
+ * Get the resolved absolute path to the FAM data directory.
+ * Respects FAM_HOME env var for testing and custom installs,
+ * otherwise defaults to ~/.fam.
  */
 export function getFamDir(): string {
+  if (process.env.FAM_HOME) {
+    return resolve(process.env.FAM_HOME)
+  }
   return resolve(expandTilde('~/.fam'))
 }
 
@@ -47,8 +52,8 @@ export function validateOutputPath(path: string): void {
   if (resolved.includes('..')) {
     throw new ConfigError('PATH_TRAVERSAL', `Output path contains '..': ${path}`)
   }
-  // Block writing to obvious sensitive locations
-  const blocked = ['/etc', '/usr', '/bin', '/sbin', '/var', '/tmp', '/root']
+  // Block writing to sensitive system locations
+  const blocked = ['/etc', '/usr', '/bin', '/sbin', '/root', '/System', '/Library']
   for (const prefix of blocked) {
     if (resolved.startsWith(prefix + '/') || resolved === prefix) {
       throw new ConfigError('PATH_BLOCKED', `Output path targets a system directory: ${path}`)

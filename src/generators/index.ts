@@ -21,6 +21,7 @@ export { generateClaudeCodeConfig } from './claude-code.js'
 export { generateCursorConfig } from './cursor.js'
 export { generateVSCodeConfig } from './vscode.js'
 export { generateOpenHandsConfig } from './openhands.js'
+export { generateOpenCodeConfig } from './opencode.js'
 export { generateGenericConfig } from './generic.js'
 export { generateInstructionFile } from './instructions.js'
 
@@ -39,6 +40,7 @@ import { generateClaudeCodeConfig } from './claude-code.js'
 import { generateCursorConfig } from './cursor.js'
 import { generateVSCodeConfig } from './vscode.js'
 import { generateOpenHandsConfig } from './openhands.js'
+import { generateOpenCodeConfig } from './opencode.js'
 import { generateGenericConfig } from './generic.js'
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -56,6 +58,8 @@ export const generators: Record<string, (input: GeneratorInput) => GeneratorOutp
   vscode_mcp_config: generateVSCodeConfig,
   openhands: generateOpenHandsConfig,
   openhands_config: generateOpenHandsConfig,
+  opencode: generateOpenCodeConfig,
+  opencode_config: generateOpenCodeConfig,
   generic: generateGenericConfig,
   generic_mcp_list: generateGenericConfig,
 }
