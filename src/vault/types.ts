@@ -44,4 +44,5 @@ export interface CredentialVault {
 export interface InjectedRequest {
   headers?: Record<string, string>
   env?: Record<string, string>
+  queryParams?: Record<string, string>
 }
