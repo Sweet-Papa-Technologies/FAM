@@ -81,7 +81,7 @@ The philosophy: **build the glue, leverage everything else.**
 
 | Component | Library / Tool | Notes |
 |---|---|---|
-| **OS keychain access** | `keyring-node` (Rust-based, NAPI-RS bindings) | Active successor to deprecated `keytar`. Uses macOS Keychain, Windows Credential Manager, Linux libsecret. Cross-platform, prebuilt binaries |
+| **OS keychain access** | `@napi-rs/keyring` (Rust-based, NAPI-RS bindings) | Active successor to deprecated `keytar`. Uses macOS Keychain, Windows Credential Manager, Linux libsecret. Cross-platform, prebuilt binaries |
 | **MCP protocol handling** | `@modelcontextprotocol/sdk` (official TS SDK) | Handles MCP message parsing, transport (stdio via `StdioClientTransport`, SSE, streamable HTTP). Stdio transport manages child process spawn, stdin/stdout JSON-RPC framing, and lifecycle. We route to it, not rewrite it |
 | **OAuth2 client flows** | `simple-oauth2` (npm, ~90K weekly downloads) | Clean client library for authorization_code, client_credentials, refresh_token grants. We orchestrate it, don't implement OAuth from scratch |
 | **OAuth provider configs** | `grant` (npm, 200+ providers) | Pre-built OAuth configs for GitHub, Google, Slack, Jira, etc. as JSON objects. Transparent proxy pattern |
@@ -149,7 +149,7 @@ The philosophy: **build the glue, leverage everything else.**
 │  │                                                              ││
 │  │  ┌───────────────────────────────────────────────────────┐   ││
 │  │  │              CREDENTIAL VAULT                          │   ││
-│  │  │  keyring-node → OS Keychain (macOS/Win/Linux)         │   ││
+│  │  │  @napi-rs/keyring → OS Keychain (macOS/Win/Linux)         │   ││
 │  │  │  • API keys, OAuth tokens, service account keys       │   ││
 │  │  │  • Pulled just-in-time, never cached in memory        │   ││
 │  │  └───────────────────────────────────────────────────────┘   ││
@@ -641,7 +641,7 @@ Language:       TypeScript (Node.js 22+)
 CLI:            commander → oclif (when plugins needed)
 Daemon:         fastify (HTTP/WebSocket) + fastify-websocket
 MCP handling:   @modelcontextprotocol/sdk
-Credential:     keyring-node (Rust/NAPI-RS → OS keychain)
+Credential:     @napi-rs/keyring (Rust/NAPI-RS → OS keychain)
 OAuth:          simple-oauth2 + grant (provider configs)
 Schema:         zod (validation) + yaml (parsing)
 Storage:        better-sqlite3 (audit log + state)
@@ -687,7 +687,7 @@ fam/
 │   │   ├── generic.ts
 │   │   └── instructions.ts    # FAM.md generator per profile
 │   ├── vault/                  # Credential management
-│   │   ├── keychain.ts         # keyring-node wrapper
+│   │   ├── keychain.ts         # @napi-rs/keyring wrapper
 │   │   ├── oauth.ts            # OAuth flow orchestration
 │   │   └── inject.ts           # Runtime credential injection
 │   ├── audit/                  # Audit logging
@@ -1047,25 +1047,24 @@ Account:  "<credential_name>:refresh"   → for OAuth refresh tokens
 Account:  "<credential_name>:expires"   → for OAuth token expiry
 ```
 
-Using `keyring-node`:
+Using `@napi-rs/keyring` (class-based Entry API):
 
 ```typescript
-import * as keyring from 'keyring-node';
+import { Entry } from '@napi-rs/keyring'
 
 // API key
-await keyring.setPassword('fam', 'github-pat', 'ghp_abc123...');
-const token = await keyring.getPassword('fam', 'github-pat');
+const entry = new Entry('fam', 'github-pat')
+entry.setPassword('ghp_abc123...')
+const token = entry.getPassword()
 
-// OAuth (multiple entries)
-await keyring.setPassword('fam', 'google-oauth:access', '<access_token>');
-await keyring.setPassword('fam', 'google-oauth:refresh', '<refresh_token>');
-await keyring.setPassword('fam', 'google-oauth:expires', '2026-04-07T14:30:00Z');
+// OAuth (multiple entries per credential)
+new Entry('fam', 'google-oauth:access').setPassword('<access_token>')
+new Entry('fam', 'google-oauth:refresh').setPassword('<refresh_token>')
+new Entry('fam', 'google-oauth:expires').setPassword('2026-04-07T14:30:00Z')
 
-// List all
-const creds = await keyring.findCredentials('fam');
-
+// List: no "list all" API — enumerate names from fam.yaml and probe each
 // Delete
-await keyring.deletePassword('fam', 'github-pat');
+new Entry('fam', 'github-pat').deletePassword()
 ```
 
 **CLI:**
@@ -1176,7 +1175,7 @@ Phase 1: Foundation (Day 1 morning)
 └─ Test: parse the sample YAML from this doc
 
 Phase 2: Credential Vault (Day 1 afternoon)
-├─ keyring-node wrapper
+├─ @napi-rs/keyring wrapper
 ├─ fam secret set/get/list/delete
 ├─ OAuth token storage (access + refresh + expiry)
 └─ Test: store and retrieve from OS keychain
