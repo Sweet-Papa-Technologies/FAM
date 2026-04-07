@@ -124,6 +124,8 @@ cp "$PROJECT_ROOT/package.json" "$LIB_DIR/"
 cp "$PROJECT_ROOT/package-lock.json" "$LIB_DIR/" 2>/dev/null || true
 
 # Install production dependencies (must allow scripts for native modules like better-sqlite3)
+# Pin the exact Node binary path so the native module matches the runtime.
+NODE_BIN="$(which node)"
 cd "$LIB_DIR"
 npm ci --omit=dev 2>&1 | tail -1
 cd "$PROJECT_ROOT"
@@ -137,12 +139,17 @@ if [[ -L "$BIN_DIR/fam" || -f "$BIN_DIR/fam" ]]; then
   rm -f "$BIN_DIR/fam"
 fi
 
+# Pin the absolute path to the Node binary used during install.
+# This ensures the native modules (better-sqlite3) match the runtime.
+NODE_BIN="$(which node)"
+dim "Using Node: $NODE_BIN ($(node -v))"
+
 cat > "$BIN_DIR/fam" << WRAPPER
 #!/usr/bin/env bash
-exec node "$LIB_DIR/dist/index.js" "\$@"
+exec "$NODE_BIN" "$LIB_DIR/dist/index.js" "\$@"
 WRAPPER
 chmod +x "$BIN_DIR/fam"
-dim "Wrapper: $BIN_DIR/fam -> node $LIB_DIR/dist/index.js"
+dim "Wrapper: $BIN_DIR/fam -> $NODE_BIN $LIB_DIR/dist/index.js"
 
 # ─── Data Directory ──────────────────────────────────────────────
 
@@ -163,9 +170,16 @@ if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
     chown -R "$REAL_USER" "$REAL_FAM_HOME"
   fi
 
-  # Also fix the lib dir so npm can read it
+  # Fix the lib dir so npm can read it
   if [[ -d "$LIB_DIR" ]]; then
     chmod -R a+rX "$LIB_DIR"
+  fi
+
+  # Fix the source repo's node_modules if it's in the project root
+  # (sudo npm ci can leave root-owned files that break subsequent npm commands)
+  if [[ -d "$PROJECT_ROOT/node_modules" ]]; then
+    info "Fixing ownership of $PROJECT_ROOT/node_modules for $REAL_USER ..."
+    chown -R "$REAL_USER" "$PROJECT_ROOT/node_modules"
   fi
 fi
 
@@ -198,7 +212,7 @@ if [[ "$OS_TYPE" == "Darwin" ]]; then
   <key>Label</key><string>com.sweetpapatech.fam</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$(which node)</string>
+    <string>$NODE_BIN</string>
     <string>$LIB_DIR/dist/index.js</string>
     <string>daemon</string>
     <string>start</string>
@@ -257,7 +271,7 @@ Description=FAM - FoFo Agent Manager Daemon
 After=network.target
 
 [Service]
-ExecStart=$(which node) $LIB_DIR/dist/index.js daemon start --foreground
+ExecStart=$NODE_BIN $LIB_DIR/dist/index.js daemon start --foreground
 Restart=on-failure
 RestartSec=5
 Environment=FAM_HOME=$REAL_HOME/.fam
