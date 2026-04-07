@@ -42,31 +42,81 @@ const TOOL_CHOICES: ToolChoice[] = [
   {
     name: 'Claude Code',
     value: 'claude_code',
-    configPaths: [
-      '~/.config/claude/claude_desktop_config.json',
-      '~/.claude/settings.json',
-    ],
+    configPaths: ['~/.config/claude/claude_desktop_config.json', '~/.claude/settings.json'],
   },
   {
     name: 'Cursor',
     value: 'cursor',
-    configPaths: [
-      '~/.cursor/mcp.json',
-    ],
+    configPaths: ['~/.cursor/mcp.json'],
   },
   {
     name: 'VS Code (Copilot)',
     value: 'vscode',
-    configPaths: [
-      '.vscode/mcp.json',
-    ],
+    configPaths: ['.vscode/mcp.json'],
+  },
+  {
+    name: 'Windsurf',
+    value: 'windsurf',
+    configPaths: ['~/.codeium/windsurf/mcp_config.json'],
+  },
+  {
+    name: 'Zed',
+    value: 'zed',
+    configPaths: ['~/Library/Application Support/Zed/settings.json', '~/.config/zed/settings.json'],
+  },
+  {
+    name: 'Cline (VS Code extension)',
+    value: 'cline',
+    configPaths: ['cline_mcp_settings.json'],
+  },
+  {
+    name: 'Roo Code',
+    value: 'roo_code',
+    configPaths: ['.roo/mcp.json'],
+  },
+  {
+    name: 'OpenCode',
+    value: 'opencode',
+    configPaths: ['~/.config/opencode/opencode.json'],
   },
   {
     name: 'OpenHands',
     value: 'openhands',
     configPaths: [],
   },
+  {
+    name: 'Gemini CLI',
+    value: 'gemini_cli',
+    configPaths: ['~/.gemini/settings.json'],
+  },
+  {
+    name: 'GitHub Copilot CLI',
+    value: 'github_copilot',
+    configPaths: ['~/.copilot/mcp-config.json'],
+  },
+  {
+    name: 'Amazon Q',
+    value: 'amazon_q',
+    configPaths: ['~/.aws/amazonq/agents/default.json'],
+  },
 ]
+
+// ---- Generator Defaults (output path + format per tool) ---------------------
+
+const GENERATOR_DEFAULTS: Record<string, { output: string; format: string }> = {
+  claude_code:    { output: '~/.claude/settings.json', format: 'claude_mcp_config' },
+  cursor:         { output: '~/.cursor/mcp.json', format: 'cursor_mcp_config' },
+  vscode:         { output: '.vscode/mcp.json', format: 'vscode_mcp_config' },
+  windsurf:       { output: '~/.codeium/windsurf/mcp_config.json', format: 'windsurf_mcp_config' },
+  zed:            { output: '~/Library/Application Support/Zed/settings.json', format: 'zed_config' },
+  cline:          { output: 'cline_mcp_settings.json', format: 'cline_mcp_config' },
+  roo_code:       { output: '.roo/mcp.json', format: 'roo_code_mcp_config' },
+  opencode:       { output: '~/.config/opencode/opencode.json', format: 'opencode_config' },
+  openhands:      { output: '~/.fam/configs/openhands.json', format: 'openhands_config' },
+  gemini_cli:     { output: '~/.gemini/settings.json', format: 'gemini_mcp_config' },
+  github_copilot: { output: '~/.copilot/mcp-config.json', format: 'github_copilot_mcp_config' },
+  amazon_q:       { output: '~/.aws/amazonq/agents/default.json', format: 'amazon_q_config' },
+}
 
 // ---- Helpers ----------------------------------------------------------------
 
@@ -125,7 +175,7 @@ function buildScaffold(
   importedServers: DiscoveredServer[],
 ): Record<string, unknown> {
   const config: Record<string, unknown> = {
-    version: '0.1',
+    version: '1.0',
   }
 
   // Settings
@@ -189,32 +239,13 @@ function buildScaffold(
       denied_servers: [],
     }
 
-    // Set up generators based on tool type
-    switch (choice.value) {
-      case 'claude_code':
-        generators['claude_code'] = {
-          output: '~/.claude/settings.json',
-          format: 'claude_mcp_config',
-        }
-        break
-      case 'cursor':
-        generators['cursor'] = {
-          output: '~/.cursor/mcp.json',
-          format: 'cursor_mcp_config',
-        }
-        break
-      case 'vscode':
-        generators['vscode'] = {
-          output: '.vscode/mcp.json',
-          format: 'vscode_mcp_config',
-        }
-        break
-      case 'openhands':
-        generators['openhands'] = {
-          output: '~/.fam/configs/openhands.json',
-          format: 'openhands_config',
-        }
-        break
+    // Set up generators — look up default output path from the registry
+    const genConfig = GENERATOR_DEFAULTS[choice.value]
+    if (genConfig) {
+      generators[choice.value] = {
+        output: genConfig.output,
+        format: genConfig.format,
+      }
     }
   }
 
@@ -227,6 +258,11 @@ function buildScaffold(
     log_action: { enabled: true, description: 'Report significant actions for audit trail' },
     list_servers: { enabled: true, description: 'List available MCP servers' },
     health: { enabled: true, description: 'Check daemon and server status' },
+    get_knowledge: { enabled: true, description: 'Retrieve a knowledge entry by key' },
+    set_knowledge: { enabled: true, description: 'Store a knowledge entry' },
+    search_knowledge: { enabled: true, description: 'Full-text search across knowledge entries' },
+    get_audit_log: { enabled: true, description: 'Query the audit trail' },
+    list_profiles: { enabled: true, description: 'List all configured profiles' },
   }
 
   // Instructions
@@ -332,6 +368,14 @@ export function registerInitCommand(program: Command): void {
 
         process.exit(0)
       } catch (err) {
+        // Ctrl+C during inquirer prompts throws ExitPromptError
+        if (
+          err instanceof Error &&
+          (err.name === 'ExitPromptError' || err.message.includes('User force closed'))
+        ) {
+          console.log(chalk.dim('\nAborted.'))
+          process.exit(0)
+        }
         if (err instanceof FamError) {
           console.error(chalk.red(`Error [${err.code}]:`) + ` ${err.message}`)
           process.exit(err.exitCode)
