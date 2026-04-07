@@ -123,9 +123,9 @@ cp -r "$PROJECT_ROOT/dist" "$LIB_DIR/"
 cp "$PROJECT_ROOT/package.json" "$LIB_DIR/"
 cp "$PROJECT_ROOT/package-lock.json" "$LIB_DIR/" 2>/dev/null || true
 
-# Install production dependencies only
+# Install production dependencies (must allow scripts for native modules like better-sqlite3)
 cd "$LIB_DIR"
-npm ci --omit=dev --ignore-scripts 2>&1 | tail -1
+npm ci --omit=dev 2>&1 | tail -1
 cd "$PROJECT_ROOT"
 
 # Make the entry point executable

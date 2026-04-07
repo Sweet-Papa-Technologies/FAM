@@ -107,7 +107,7 @@ if (Test-Path $lockFile) {
 # Install production dependencies only
 Push-Location $LibDir
 try {
-    npm ci --omit=dev --ignore-scripts 2>&1 | Select-Object -Last 1
+    npm ci --omit=dev 2>&1 | Select-Object -Last 1
 } finally {
     Pop-Location
 }
