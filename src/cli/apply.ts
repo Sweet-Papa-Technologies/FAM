@@ -17,7 +17,7 @@
 
 import { Command } from 'commander'
 import { resolve } from 'node:path'
-import { existsSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import chalk from 'chalk'
 import { confirm, select, password } from '@inquirer/prompts'
@@ -69,6 +69,21 @@ function isStdioServer(server: unknown): server is StdioServerConfig {
 
 function hashString(content: string): string {
   return createHash('sha256').update(content).digest('hex')
+}
+
+/**
+ * Extract an existing FAM session token from a generated config file.
+ * Searches for `fam_sk_` pattern in the file content.
+ */
+function extractTokenFromConfig(filePath: string): string | null {
+  try {
+    if (!existsSync(filePath)) return null
+    const content = readFileSync(filePath, 'utf-8')
+    const match = content.match(/fam_sk_[a-z]{3}_[0-9a-f]{64}/)
+    return match ? match[0] : null
+  } catch {
+    return null
+  }
 }
 
 async function loadSessionStore(): Promise<SessionStore> {
@@ -151,13 +166,21 @@ async function executeApply(
     writeSessionStore(sessions)
   }
 
-  // For existing profiles, look up their token from prior registration.
-  // We can't retrieve the raw token (only hash is stored), so we keep the
-  // existing config content for unchanged profiles. If no token is available
-  // (profile exists but was never registered), use a placeholder and warn.
-  for (const [profileName] of Object.entries(config.profiles)) {
+  // For existing profiles, try to extract the token already embedded in
+  // the generated config file. We can't retrieve the raw token from
+  // sessions.json (only the hash is stored), but the config file on disk
+  // has it. If the file doesn't exist or the token can't be found, use a
+  // placeholder and warn.
+  for (const [profileName, profile] of Object.entries(config.profiles)) {
     if (!profileTokenMap[profileName]) {
-      // Check if there's already a generated config — we'll preserve its content
+      const gen = config.generators[profile.config_target]
+      if (gen) {
+        const existingToken = extractTokenFromConfig(expandTilde(gen.output))
+        if (existingToken) {
+          profileTokenMap[profileName] = existingToken
+          continue
+        }
+      }
       profileTokenMap[profileName] = `<run 'fam register ${profileName}' to generate a token>`
     }
   }
