@@ -264,13 +264,21 @@ async function executeApply(
       }
       created++
     } else {
-      // Subsequent run: upsert silently
+      // Subsequent run: respect the stored merge strategy
       if (!dryRun) {
         validateOutputPath(targetPath)
         const dir = targetPath.substring(0, targetPath.lastIndexOf('/'))
         if (dir) mkdirSync(dir, { recursive: true })
-        writeFileSync(targetPath, output.content, 'utf-8')
-        chmodSync(targetPath, 0o600)
+
+        const storedStrategy = generatedConfigs[genName].strategy
+        if (storedStrategy === 'import_and_manage') {
+          // Merge FAM keys into existing file (preserves user settings)
+          applyMergeStrategy(targetPath, output.content, 'import_and_manage')
+        } else {
+          writeFileSync(targetPath, output.content, 'utf-8')
+          chmodSync(targetPath, 0o600)
+        }
+
         generatedConfigs[genName] = {
           ...generatedConfigs[genName],
           last_written: new Date().toISOString(),
