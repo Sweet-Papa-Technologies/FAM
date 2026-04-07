@@ -25,6 +25,9 @@ import { UpstreamManager } from './upstream-manager.js'
 import { getNativeToolEntries } from './native-tools.js'
 import { createDaemon } from './server.js'
 import type { StdioServerConfig, HttpServerConfig } from '../config/types.js'
+import { KnowledgeStore } from '../knowledge/index.js'
+import { OAuthManager } from '../vault/oauth.js'
+import { KNOWLEDGE_DB } from '../utils/paths.js'
 import logger from '../utils/logger.js'
 
 const SHUTDOWN_DRAIN_MS = 5_000
@@ -120,6 +123,18 @@ export async function startDaemon(
   const auth = new AuthEngine(sessionsData)
   const registry = new ToolRegistry()
 
+  // Initialize knowledge store
+  let knowledgeStore: KnowledgeStore | undefined
+  try {
+    knowledgeStore = new KnowledgeStore(KNOWLEDGE_DB)
+    logger.info('Knowledge store initialized')
+  } catch (err) {
+    logger.warn({ error: err instanceof Error ? err.message : String(err) }, 'Failed to initialize knowledge store')
+  }
+
+  // Create OAuth manager
+  const oauthManager = new OAuthManager(vault, config)
+
   // 4. Start upstream connections
   // Separate stdio and HTTP servers
   const stdioServers: Record<string, StdioServerConfig> = {}
@@ -168,7 +183,7 @@ export async function startDaemon(
   upstreamClients.set('http', upstreamManager)
 
   // Create proxy
-  const proxy = new McpProxy(registry, vault, audit, upstreamClients, config)
+  const proxy = new McpProxy(registry, vault, audit, upstreamClients, config, oauthManager, knowledgeStore)
 
   // 6. Create + start Fastify server
   const server = await createDaemon(config, {
@@ -181,6 +196,7 @@ export async function startDaemon(
     upstreamManager,
     startTime,
     configPath: deps.configPath,
+    knowledgeStore,
   })
 
   const port = config.settings.daemon.port
@@ -195,6 +211,7 @@ export async function startDaemon(
     isShuttingDown = true
     logger.info('Shutting down daemon...')
     await gracefulShutdown(server, stdioPool, upstreamManager, audit)
+    try { knowledgeStore?.close() } catch { /* best effort */ }
     process.exit(0)
   }
 

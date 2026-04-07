@@ -6,7 +6,11 @@
   "bin": {
     "fam": "./dist/index.js"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/sweetpapatech/fam.git"
@@ -31,35 +35,43 @@
     "node": ">=22"
   },
   "dependencies": {
-    "commander": "^13.1.0",
-    "fastify": "^5.3.2",
     "@fastify/websocket": "^11.2.0",
     "@modelcontextprotocol/sdk": "^1.11.0",
     "@napi-rs/keyring": "^1.1.6",
     "better-sqlite3": "^11.8.1",
-    "yaml": "^2.7.1",
-    "zod": "^3.24.3",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "fastify": "^5.3.2",
+    "inquirer": "^12.4.2",
     "json-diff": "^1.0.6",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
-    "chalk": "^5.4.1",
-    "inquirer": "^12.4.2"
+    "simple-oauth2": "^5.1.0",
+    "yaml": "^2.7.1",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "vitest": "^3.1.1",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/json-diff": "^1.0.3",
     "@types/inquirer": "^9.0.7",
-    "eslint": "^8.57.1",
+    "@types/json-diff": "^1.0.3",
+    "@types/simple-oauth2": "^5.0.8",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
-    "prettier": "^3.5.3",
+    "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.1",
+    "prettier": "^3.5.3",
+    "tsup": "^8.4.0",
     "tsx": "^4.19.3",
-    "tsup": "^8.4.0"
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
   },
-  "keywords": ["mcp", "agent", "cli", "proxy", "credentials"],
+  "keywords": [
+    "mcp",
+    "agent",
+    "cli",
+    "proxy",
+    "credentials"
+  ],
   "author": "Forrester Terry <forrester@sweetpapatech.com>",
   "license": "MIT"
 }

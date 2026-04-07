@@ -53,6 +53,9 @@ import { registerSecretCommand } from './secret.js'
 import { registerRegisterCommand } from './register.js'
 import { registerDaemonCommand } from './daemon.js'
 import { registerLogCommand } from './log.js'
+import { registerAuthCommand } from './auth.js'
+import { registerKnowledgeCommand } from './knowledge.js'
+import { registerDriftCommand } from './drift.js'
 
 registerInitCommand(program)
 registerPlanCommand(program)
@@ -65,5 +68,8 @@ registerSecretCommand(program)
 registerRegisterCommand(program)
 registerDaemonCommand(program)
 registerLogCommand(program)
+registerAuthCommand(program)
+registerKnowledgeCommand(program)
+registerDriftCommand(program)
 
 export { program }

@@ -13,6 +13,8 @@ import type { FamConfig, McpServerConfig } from '../config/types.js'
 import type { McpResult, ToolDefinition, CallContext } from './types.js'
 import { handleNativeTool } from './native-tools.js'
 import type { NativeToolDeps } from './native-tools.js'
+import { OAuthManager } from '../vault/oauth.js'
+import type { KnowledgeStore } from '../knowledge/index.js'
 
 /**
  * McpUpstreamClient — Interface for upstream MCP connections.
@@ -27,6 +29,8 @@ export interface McpUpstreamClient {
 
 export class McpProxy {
   private startTime: number
+  private oauthManager?: OAuthManager
+  private knowledgeStore?: KnowledgeStore
 
   constructor(
     private registry: ToolRegistry,
@@ -34,8 +38,19 @@ export class McpProxy {
     private audit: IAuditLogger,
     private upstreamClients: Map<string, McpUpstreamClient>,
     private config: FamConfig,
+    oauthManager?: OAuthManager,
+    knowledgeStore?: KnowledgeStore,
   ) {
     this.startTime = Date.now()
+    this.oauthManager = oauthManager
+    this.knowledgeStore = knowledgeStore
+  }
+
+  /**
+   * Set the knowledge store (called after construction when it becomes available).
+   */
+  setKnowledgeStore(store: KnowledgeStore): void {
+    this.knowledgeStore = store
   }
 
   /**
@@ -119,7 +134,19 @@ export class McpProxy {
     // 5. Pull credential from vault (just-in-time)
     let _credential: string | null = null
     if (credentialName) {
-      _credential = await this.vault.get(credentialName)
+      // Check if this credential is OAuth2 — use OAuthManager for token retrieval
+      const credConfig = this.config.credentials[credentialName]
+      if (credConfig?.type === 'oauth2' && this.oauthManager) {
+        try {
+          _credential = await this.oauthManager.getValidToken(credentialName)
+        } catch {
+          // Fall back to direct vault access
+          _credential = await this.vault.get(credentialName)
+        }
+      } else {
+        _credential = await this.vault.get(credentialName)
+      }
+
       if (!_credential) {
         this.audit.logCall({
           profile,
@@ -240,6 +267,16 @@ export class McpProxy {
 
     const profileConfig = this.config.profiles[profile]
 
+    // Build allProfiles for list_profiles native tool
+    const allProfiles: Record<string, { description: string; allowed_servers: string[]; denied_servers: string[] }> = {}
+    for (const [name, p] of Object.entries(this.config.profiles)) {
+      allProfiles[name] = {
+        description: p.description,
+        allowed_servers: p.allowed_servers,
+        denied_servers: p.denied_servers ?? [],
+      }
+    }
+
     return {
       registry: this.registry,
       audit: this.audit,
@@ -251,6 +288,8 @@ export class McpProxy {
             denied_servers: profileConfig.denied_servers ?? [],
           }
         : undefined,
+      knowledge: this.knowledgeStore,
+      allProfiles,
     }
   }
 }

@@ -20,6 +20,7 @@ import { parseConfig } from '../config/parser.js'
 import type { SessionStore } from '../config/types.js'
 import { readFileSync, existsSync } from 'node:fs'
 import { SESSIONS_FILE } from '../utils/paths.js'
+import type { KnowledgeStore } from '../knowledge/index.js'
 import logger from '../utils/logger.js'
 
 /**
@@ -32,6 +33,7 @@ export interface ServerDeps extends DaemonDeps {
   upstreamManager: UpstreamManager
   startTime: number
   configPath?: string
+  knowledgeStore?: KnowledgeStore
 }
 
 /**

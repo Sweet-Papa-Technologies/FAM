@@ -59,9 +59,9 @@ describe('Native Tools', () => {
   })
 
   describe('getNativeToolDefinitions', () => {
-    it('should return 4 native tool definitions', () => {
+    it('should return 9 native tool definitions', () => {
       const defs = getNativeToolDefinitions()
-      expect(defs).toHaveLength(4)
+      expect(defs).toHaveLength(9)
     })
 
     it('should include all expected tools', () => {
@@ -71,6 +71,11 @@ describe('Native Tools', () => {
       expect(names).toContain('fam__log_action')
       expect(names).toContain('fam__list_servers')
       expect(names).toContain('fam__health')
+      expect(names).toContain('fam__get_knowledge')
+      expect(names).toContain('fam__set_knowledge')
+      expect(names).toContain('fam__search_knowledge')
+      expect(names).toContain('fam__get_audit_log')
+      expect(names).toContain('fam__list_profiles')
     })
 
     it('should have valid inputSchema on all tools', () => {
@@ -105,6 +110,12 @@ describe('Native Tools', () => {
       expect(data.denied_servers).toEqual(['jira'])
       expect(data.tool_count).toBeGreaterThan(0)
       expect(data.native_tools).toContain('fam__whoami')
+      expect(data.native_tools).toContain('fam__get_knowledge')
+      expect(data.native_tools).toContain('fam__set_knowledge')
+      expect(data.native_tools).toContain('fam__search_knowledge')
+      expect(data.native_tools).toContain('fam__get_audit_log')
+      expect(data.native_tools).toContain('fam__list_profiles')
+      expect(data.native_tools).toHaveLength(9)
     })
   })
 

@@ -15,6 +15,7 @@ import type {
 } from './types.js'
 import type { ToolRegistry } from './tool-registry.js'
 import type { IAuditLogger } from '../audit/types.js'
+import type { KnowledgeStore } from '../knowledge/index.js'
 
 // ─── Tool Definitions ─────────────────────────────────────────────
 
@@ -76,6 +77,66 @@ export function getNativeToolDefinitions(): ToolDefinition[] {
         additionalProperties: false,
       },
     },
+    {
+      name: 'fam__get_knowledge',
+      description: 'Retrieve a knowledge entry by key',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'Knowledge entry key' },
+          namespace: { type: 'string', description: 'Namespace (default: global)' },
+        },
+        required: ['key'],
+      },
+    },
+    {
+      name: 'fam__set_knowledge',
+      description: 'Store a knowledge entry (upsert)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          key: { type: 'string', description: 'Knowledge entry key' },
+          value: { type: 'string', description: 'Knowledge entry value' },
+          namespace: { type: 'string', description: 'Namespace (default: global)' },
+          tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' },
+        },
+        required: ['key', 'value'],
+      },
+    },
+    {
+      name: 'fam__search_knowledge',
+      description: 'Full-text search across knowledge entries',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query' },
+          namespace: { type: 'string', description: 'Filter by namespace' },
+          limit: { type: 'number', description: 'Max results (default: 20)' },
+        },
+        required: ['query'],
+      },
+    },
+    {
+      name: 'fam__get_audit_log',
+      description: 'Query the audit trail',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          profile: { type: 'string', description: 'Filter by profile' },
+          server: { type: 'string', description: 'Filter by server namespace' },
+          limit: { type: 'number', description: 'Max entries (default: 50)' },
+          since: { type: 'string', description: 'ISO timestamp to filter from' },
+        },
+      },
+    },
+    {
+      name: 'fam__list_profiles',
+      description: 'List all configured profiles with access details',
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    },
   ]
 }
 
@@ -104,6 +165,8 @@ export interface NativeToolDeps {
     allowed_servers: string[]
     denied_servers: string[]
   }
+  knowledge?: KnowledgeStore
+  allProfiles?: Record<string, { description: string; allowed_servers: string[]; denied_servers: string[] }>
 }
 
 // ─── Handler dispatch ─────────────────────────────────────────────
@@ -132,6 +195,16 @@ export async function handleNativeTool(
       return handleListServers(ctx, deps)
     case 'health':
       return handleHealth(deps)
+    case 'get_knowledge':
+      return handleGetKnowledge(args, deps)
+    case 'set_knowledge':
+      return handleSetKnowledge(args, ctx, deps)
+    case 'search_knowledge':
+      return handleSearchKnowledge(args, deps)
+    case 'get_audit_log':
+      return handleGetAuditLog(args, deps)
+    case 'list_profiles':
+      return handleListProfiles(deps)
     default:
       return {
         content: [{ type: 'text', text: `Unknown native tool: ${name}` }],
@@ -159,6 +232,11 @@ function handleWhoami(ctx: CallContext, deps: NativeToolDeps): McpResult {
       'fam__log_action',
       'fam__list_servers',
       'fam__health',
+      'fam__get_knowledge',
+      'fam__set_knowledge',
+      'fam__search_knowledge',
+      'fam__get_audit_log',
+      'fam__list_profiles',
     ],
   }
 
@@ -265,5 +343,143 @@ function handleHealth(deps: NativeToolDeps): McpResult {
 
   return {
     content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+  }
+}
+
+// ─── Knowledge handlers ──────────────────────────────────────────
+
+function handleGetKnowledge(args: unknown, deps: NativeToolDeps): McpResult {
+  if (!deps.knowledge) {
+    return {
+      content: [{ type: 'text', text: 'Knowledge store is not initialized' }],
+      isError: true,
+    }
+  }
+
+  const { key, namespace } = (args ?? {}) as Record<string, unknown>
+
+  if (typeof key !== 'string' || !key) {
+    return {
+      content: [{ type: 'text', text: 'Missing required field: key' }],
+      isError: true,
+    }
+  }
+
+  const entry = deps.knowledge.get(key, typeof namespace === 'string' ? namespace : undefined)
+  if (!entry) {
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ found: false, key }) }],
+    }
+  }
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify(entry, null, 2) }],
+  }
+}
+
+function handleSetKnowledge(
+  args: unknown,
+  ctx: CallContext,
+  deps: NativeToolDeps,
+): McpResult {
+  if (!deps.knowledge) {
+    return {
+      content: [{ type: 'text', text: 'Knowledge store is not initialized' }],
+      isError: true,
+    }
+  }
+
+  if (!args || typeof args !== 'object') {
+    return {
+      content: [{ type: 'text', text: 'Invalid arguments: expected { key, value }' }],
+      isError: true,
+    }
+  }
+
+  const { key, value, namespace, tags } = args as Record<string, unknown>
+
+  if (typeof key !== 'string' || !key) {
+    return {
+      content: [{ type: 'text', text: 'Missing required field: key' }],
+      isError: true,
+    }
+  }
+
+  if (typeof value !== 'string' || !value) {
+    return {
+      content: [{ type: 'text', text: 'Missing required field: value' }],
+      isError: true,
+    }
+  }
+
+  deps.knowledge.set(key, value, {
+    namespace: typeof namespace === 'string' ? namespace : undefined,
+    tags: Array.isArray(tags) ? (tags as string[]) : undefined,
+    createdBy: ctx.profile,
+  })
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify({ stored: true, key }) }],
+  }
+}
+
+function handleSearchKnowledge(args: unknown, deps: NativeToolDeps): McpResult {
+  if (!deps.knowledge) {
+    return {
+      content: [{ type: 'text', text: 'Knowledge store is not initialized' }],
+      isError: true,
+    }
+  }
+
+  const { query, namespace, limit } = (args ?? {}) as Record<string, unknown>
+
+  if (typeof query !== 'string' || !query) {
+    return {
+      content: [{ type: 'text', text: 'Missing required field: query' }],
+      isError: true,
+    }
+  }
+
+  const results = deps.knowledge.search(query, {
+    namespace: typeof namespace === 'string' ? namespace : undefined,
+    limit: typeof limit === 'number' ? limit : undefined,
+  })
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify(results, null, 2) }],
+  }
+}
+
+// ─── Audit log handler ───────────────────────────────────────────
+
+function handleGetAuditLog(args: unknown, deps: NativeToolDeps): McpResult {
+  const { profile, server, limit, since } = (args ?? {}) as Record<string, unknown>
+
+  const entries = deps.audit.query({
+    profile: typeof profile === 'string' ? profile : undefined,
+    serverNs: typeof server === 'string' ? server : undefined,
+    limit: typeof limit === 'number' ? limit : undefined,
+    since: typeof since === 'string' ? since : undefined,
+  })
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify({ entries, count: entries.length }, null, 2) }],
+  }
+}
+
+// ─── Profile listing handler ─────────────────────────────────────
+
+function handleListProfiles(deps: NativeToolDeps): McpResult {
+  const allProfiles = deps.allProfiles ?? {}
+
+  const profiles = Object.entries(allProfiles).map(([name, config]) => ({
+    name,
+    description: config.description,
+    allowed_servers: config.allowed_servers,
+    denied_servers: config.denied_servers,
+  }))
+
+  return {
+    content: [{ type: 'text', text: JSON.stringify({ profiles }, null, 2) }],
   }
 }

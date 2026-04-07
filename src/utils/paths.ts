@@ -75,6 +75,9 @@ export const SESSIONS_FILE = join(FAM_DIR, 'sessions.json')
 /** Audit database: SQLite file for call and change logs */
 export const AUDIT_DB = join(FAM_DIR, 'audit.db')
 
+/** Knowledge store database */
+export const KNOWLEDGE_DB = join(FAM_DIR, 'knowledge.db')
+
 /** PID file: running daemon process ID */
 export const PID_FILE = join(FAM_DIR, 'fam.pid')
 
