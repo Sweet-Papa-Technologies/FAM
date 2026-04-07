@@ -8,7 +8,7 @@
 import { Command } from 'commander'
 import chalk from 'chalk'
 import { KnowledgeStore } from '../knowledge/index.js'
-import { KNOWLEDGE_DB } from '../utils/paths.js'
+import { KNOWLEDGE_DB, ensureFamDir } from '../utils/paths.js'
 
 // ─── Command Registration ─────────────────────────────────────────
 
@@ -25,6 +25,7 @@ export function registerKnowledgeCommand(program: Command): void {
     .option('--namespace <ns>', 'Namespace for the entry', 'global')
     .option('--tags <tags>', 'Comma-separated tags')
     .action((key: string, value: string, opts: { namespace: string; tags?: string }) => {
+      ensureFamDir()
       const store = new KnowledgeStore(KNOWLEDGE_DB)
       try {
         const tags = opts.tags ? opts.tags.split(',').map((t: string) => t.trim()) : []
@@ -42,6 +43,7 @@ export function registerKnowledgeCommand(program: Command): void {
     .description('Retrieve a knowledge entry')
     .option('--namespace <ns>', 'Namespace', 'global')
     .action((key: string, opts: { namespace: string }) => {
+      ensureFamDir()
       const store = new KnowledgeStore(KNOWLEDGE_DB)
       try {
         const entry = store.get(key, opts.namespace)
@@ -63,6 +65,7 @@ export function registerKnowledgeCommand(program: Command): void {
     .option('--namespace <ns>', 'Filter by namespace')
     .option('--limit <n>', 'Max results', '20')
     .action((query: string, opts: { namespace?: string; limit: string }) => {
+      ensureFamDir()
       const store = new KnowledgeStore(KNOWLEDGE_DB)
       try {
         const results = store.search(query, {
@@ -95,6 +98,7 @@ export function registerKnowledgeCommand(program: Command): void {
     .option('--namespace <ns>', 'Filter by namespace')
     .option('--limit <n>', 'Max results', '50')
     .action((opts: { namespace?: string; limit: string }) => {
+      ensureFamDir()
       const store = new KnowledgeStore(KNOWLEDGE_DB)
       try {
         const results = store.list({
@@ -123,6 +127,7 @@ export function registerKnowledgeCommand(program: Command): void {
     .description('Delete a knowledge entry')
     .option('--namespace <ns>', 'Namespace', 'global')
     .action((key: string, opts: { namespace: string }) => {
+      ensureFamDir()
       const store = new KnowledgeStore(KNOWLEDGE_DB)
       try {
         const deleted = store.delete(key, opts.namespace)
