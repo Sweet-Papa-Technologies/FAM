@@ -136,6 +136,31 @@ Write-Dim "PS wrapper: $ps1Wrapper"
 Write-Info "Creating data directory at $FamHome ..."
 New-Item -ItemType Directory -Path $FamHome -Force | Out-Null
 
+# ─── Daemon Auto-Start (Windows Task Scheduler) ──────────────────
+
+Write-Info "Setting up daemon auto-start (Task Scheduler)..."
+
+$taskName = "FAM Daemon"
+$nodeExe = (Get-Command node).Source
+$libEntry = Join-Path $LibDir "dist\index.js"
+
+# Remove existing task if present
+schtasks /Delete /TN $taskName /F 2>$null | Out-Null
+
+# Create a task that runs at user logon
+$action = "cmd /c `"$nodeExe`" `"$libEntry`" daemon start --foreground > `"$FamHome\daemon.log`" 2>&1"
+schtasks /Create /TN $taskName /TR $action /SC ONLOGON /RL LIMITED /F 2>$null | Out-Null
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Dim "Task '$taskName' registered (runs at logon)"
+
+    # Start the daemon now
+    Start-Process -NoNewWindow -FilePath $nodeExe -ArgumentList "`"$libEntry`" daemon start --foreground" -RedirectStandardOutput "$FamHome\daemon.log" -RedirectStandardError "$FamHome\daemon.err" -WindowStyle Hidden
+    Write-Dim "Daemon started"
+} else {
+    Write-Warn "Could not register scheduled task. Start the daemon manually: fam daemon start"
+}
+
 # ─── PATH ─────────────────────────────────────────────────────────
 
 $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")

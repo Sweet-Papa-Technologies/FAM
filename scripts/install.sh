@@ -169,6 +169,118 @@ if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
   fi
 fi
 
+# ─── Daemon Auto-Start ───────────────────────────────────────────
+
+OS_TYPE="$(uname -s)"
+FAM_BIN="$BIN_DIR/fam"
+
+# Determine the real user (even when running under sudo)
+if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+  REAL_USER="$SUDO_USER"
+  REAL_HOME=$(eval echo "~$REAL_USER")
+else
+  REAL_USER="$(whoami)"
+  REAL_HOME="$HOME"
+fi
+
+if [[ "$OS_TYPE" == "Darwin" ]]; then
+  PLIST_DIR="$REAL_HOME/Library/LaunchAgents"
+  PLIST_PATH="$PLIST_DIR/com.sweetpapatech.fam.plist"
+
+  info "Installing launchd daemon (auto-start on login)..."
+  mkdir -p "$PLIST_DIR"
+
+  cat > "$PLIST_PATH" << PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.sweetpapatech.fam</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$(which node)</string>
+    <string>$LIB_DIR/dist/index.js</string>
+    <string>daemon</string>
+    <string>start</string>
+    <string>--foreground</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>$REAL_HOME/.fam/daemon.log</string>
+  <key>StandardErrorPath</key><string>$REAL_HOME/.fam/daemon.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/usr/bin:/bin</string>
+    <key>FAM_HOME</key><string>$REAL_HOME/.fam</string>
+  </dict>
+</dict>
+</plist>
+PLIST
+
+  # Fix ownership if running as root
+  if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+    chown "$REAL_USER" "$PLIST_PATH"
+  fi
+
+  # Unload old version if loaded, then load new
+  if launchctl list com.sweetpapatech.fam &>/dev/null; then
+    # Run as the real user, not root
+    if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+      sudo -u "$REAL_USER" launchctl unload "$PLIST_PATH" 2>/dev/null || true
+      sudo -u "$REAL_USER" launchctl load "$PLIST_PATH"
+    else
+      launchctl unload "$PLIST_PATH" 2>/dev/null || true
+      launchctl load "$PLIST_PATH"
+    fi
+  else
+    if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+      sudo -u "$REAL_USER" launchctl load "$PLIST_PATH"
+    else
+      launchctl load "$PLIST_PATH"
+    fi
+  fi
+
+  dim "Installed: $PLIST_PATH"
+  dim "Daemon will start automatically on login"
+  dim "Logs: $REAL_HOME/.fam/daemon.log"
+
+elif [[ "$OS_TYPE" == "Linux" ]]; then
+  UNIT_DIR="$REAL_HOME/.config/systemd/user"
+  UNIT_PATH="$UNIT_DIR/fam.service"
+
+  info "Installing systemd user service (auto-start on login)..."
+  mkdir -p "$UNIT_DIR"
+
+  cat > "$UNIT_PATH" << UNIT
+[Unit]
+Description=FAM - FoFo Agent Manager Daemon
+After=network.target
+
+[Service]
+ExecStart=$(which node) $LIB_DIR/dist/index.js daemon start --foreground
+Restart=on-failure
+RestartSec=5
+Environment=FAM_HOME=$REAL_HOME/.fam
+
+[Install]
+WantedBy=default.target
+UNIT
+
+  if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+    chown "$REAL_USER" "$UNIT_PATH"
+    sudo -u "$REAL_USER" systemctl --user daemon-reload
+    sudo -u "$REAL_USER" systemctl --user enable fam
+    sudo -u "$REAL_USER" systemctl --user restart fam
+  else
+    systemctl --user daemon-reload
+    systemctl --user enable fam
+    systemctl --user restart fam
+  fi
+
+  dim "Installed: $UNIT_PATH"
+  dim "Daemon enabled and started"
+fi
+
 # ─── PATH Check ──────────────────────────────────────────────────
 
 if ! echo "$PATH" | tr ':' '\n' | grep -qx "$BIN_DIR"; then
@@ -222,5 +334,8 @@ fi
 echo ""
 echo -e "${GREEN}Get started:${RESET}"
 echo "  fam init              # Create fam.yaml"
+echo "  fam plan              # Preview changes"
+echo "  fam apply             # Apply configuration"
+echo "  fam daemon status     # Check daemon is running"
 echo "  fam --help            # All commands"
 echo ""
