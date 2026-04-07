@@ -313,11 +313,16 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
     const fsTools = toolNames.filter((n) => n.startsWith('filesystem__'))
     expect(fsTools.length).toBeGreaterThan(0)
 
-    // Should have native FAM tools
+    // Should have native FAM tools (all 9)
     expect(toolNames).toContain('fam__whoami')
     expect(toolNames).toContain('fam__log_action')
     expect(toolNames).toContain('fam__list_servers')
     expect(toolNames).toContain('fam__health')
+    expect(toolNames).toContain('fam__get_knowledge')
+    expect(toolNames).toContain('fam__set_knowledge')
+    expect(toolNames).toContain('fam__search_knowledge')
+    expect(toolNames).toContain('fam__get_audit_log')
+    expect(toolNames).toContain('fam__list_profiles')
 
     // Descriptions should be prefixed
     const fsTool = result.tools.find((t) => t.name.startsWith('filesystem__'))
@@ -429,6 +434,110 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
       // just verify tools/list returned some tools
       expect(result.tools.length).toBeGreaterThan(0)
     }
+  })
+
+  // ── Phase 3b: Knowledge Store (via native tools) ───────────────
+
+  it('15b. fam__set_knowledge stores an entry', async () => {
+    const resp = await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__set_knowledge',
+        arguments: {
+          key: 'coding.style',
+          value: '2-space indent, single quotes',
+          namespace: 'project',
+          tags: ['style', 'formatting'],
+        },
+      },
+      sessionToken!,
+    )
+    expect(resp.status).toBe(200)
+    const result = resp.body.result as { content: Array<{ text: string }> }
+    const data = JSON.parse(result.content[0].text)
+    expect(data.stored).toBe(true)
+  })
+
+  it('15c. fam__get_knowledge retrieves stored entry', async () => {
+    const resp = await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__get_knowledge',
+        arguments: { key: 'coding.style', namespace: 'project' },
+      },
+      sessionToken!,
+    )
+    expect(resp.status).toBe(200)
+    const result = resp.body.result as { content: Array<{ text: string }> }
+    const data = JSON.parse(result.content[0].text)
+    expect(data.key).toBe('coding.style')
+    expect(data.value).toContain('2-space indent')
+    expect(data.namespace).toBe('project')
+    expect(data.tags).toContain('style')
+  })
+
+  it('15d. fam__search_knowledge finds entries via FTS', async () => {
+    // Store another entry to search for
+    await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__set_knowledge',
+        arguments: {
+          key: 'testing.strategy',
+          value: 'Use Vitest with --reporter verbose',
+          namespace: 'project',
+        },
+      },
+      sessionToken!,
+    )
+
+    const resp = await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__search_knowledge',
+        arguments: { query: 'indent', namespace: 'project' },
+      },
+      sessionToken!,
+    )
+    expect(resp.status).toBe(200)
+    const result = resp.body.result as { content: Array<{ text: string }> }
+    const data = JSON.parse(result.content[0].text)
+    expect(data.entries.length).toBeGreaterThan(0)
+    expect(data.entries[0].key).toBe('coding.style')
+  })
+
+  it('15e. fam__get_audit_log returns entries', async () => {
+    const resp = await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__get_audit_log',
+        arguments: { limit: 10 },
+      },
+      sessionToken!,
+    )
+    expect(resp.status).toBe(200)
+    const result = resp.body.result as { content: Array<{ text: string }> }
+    const data = JSON.parse(result.content[0].text)
+    expect(data.entries).toBeDefined()
+    expect(data.count).toBeGreaterThan(0)
+  })
+
+  it('15f. fam__list_profiles returns profile info', async () => {
+    const resp = await mcpCall(
+      'tools/call',
+      {
+        name: 'fam__list_profiles',
+        arguments: {},
+      },
+      sessionToken!,
+    )
+    expect(resp.status).toBe(200)
+    const result = resp.body.result as { content: Array<{ text: string }> }
+    const data = JSON.parse(result.content[0].text)
+    expect(data.profiles).toBeDefined()
+    const profileNames = data.profiles.map((p: { name: string }) => p.name)
+    expect(profileNames).toContain('test-profile')
+    expect(profileNames).toContain('restricted-profile')
   })
 
   // ── Phase 4: Access Control ────────────────────────────────────

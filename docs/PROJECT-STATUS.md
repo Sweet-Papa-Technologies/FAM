@@ -60,18 +60,17 @@ Developer writes fam.yaml
 
 | Metric | Value |
 |---|---|
-| Source files | 54 TypeScript files |
-| Source lines of code | 7,586 |
-| Test files | 23 |
-| Test lines of code | 4,109 |
-| Total tests | 237 (all passing) |
-| Test execution time | ~6 seconds |
-| Commits | 13 |
+| Source files | 72 TypeScript files |
+| Source lines of code | 9,735 |
+| Test files | 35 |
+| Test lines of code | 6,013 |
+| Total tests | 379 (all passing) |
+| Test execution time | ~9 seconds |
 | Security findings fixed | 4 critical, 9 high |
-| Config generators | 6 (Claude Code, Cursor, VS Code, OpenHands, OpenCode, generic) |
-| CLI commands | 12 |
-| Native MCP tools | 4 |
-| External dependencies | 12 runtime, 10 dev |
+| Config generators | 13 (Claude Code, Cursor, VS Code, OpenHands, OpenCode, Windsurf, Zed, Cline, Roo Code, Gemini CLI, GitHub Copilot, Amazon Q, generic) |
+| CLI commands | 15 |
+| Native MCP tools | 9 |
+| External dependencies | 13 runtime, 11 dev |
 
 ---
 

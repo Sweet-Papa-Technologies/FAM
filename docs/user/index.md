@@ -70,12 +70,19 @@ fam daemon start --foreground
 The single source of truth. Declares your credentials, MCP servers, tool profiles, and config generators. Everything else is derived from this file.
 
 ```yaml
-version: "0.1"
+version: "1.0"
 
 credentials:
   github-pat:
     type: api_key
     description: "GitHub Personal Access Token"
+
+  github-oauth:
+    type: oauth2
+    description: "GitHub OAuth2"
+    provider: github
+    client_id: "your-client-id"
+    scopes: ["repo", "read:user"]
 
 mcp_servers:
   github:
@@ -134,6 +141,8 @@ fam secret list
 # jira-oauth    oauth2     missing   -> run: fam secret set jira-oauth
 ```
 
+For OAuth2 credentials, use `fam auth login <name>` to start the browser-based authorization flow. FAM stores the tokens in your keychain and handles refresh automatically when they expire. Supported providers: GitHub, Google, Atlassian, Microsoft, GitLab, Slack.
+
 ### The Daemon
 
 FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a standard MCP server. The daemon:
@@ -180,6 +189,15 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 | `fam secret list` | Show all credentials and their status |
 | `fam secret delete <name>` | Remove a credential from the keychain |
 
+### OAuth2 Commands
+
+| Command | Description |
+|---|---|
+| `fam auth login <credential>` | Start OAuth2 authorization flow (opens browser) |
+| `fam auth status [credential]` | Show OAuth2 token status and expiry |
+| `fam auth refresh <credential>` | Force-refresh an access token |
+| `fam auth providers` | List supported OAuth2 providers |
+
 ### Token & Server Commands
 
 | Command | Description |
@@ -191,6 +209,18 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 | `fam mcp remove <name>` | Remove an MCP server |
 | `fam mcp list` | List configured MCP servers |
 
+### Knowledge Commands
+
+| Command | Description |
+|---|---|
+| `fam knowledge set <key> <value>` | Store a knowledge entry |
+| `fam knowledge get <key>` | Retrieve a knowledge entry |
+| `fam knowledge search <query>` | Full-text search across entries |
+| `fam knowledge list` | List all entries |
+| `fam knowledge delete <key>` | Delete an entry |
+
+Options: `--namespace <ns>` (scope entries), `--tags <t1,t2>` (categorize), `--limit <n>` (pagination).
+
 ### Monitoring Commands
 
 | Command | Description |
@@ -201,6 +231,16 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 | `fam log --since 24h` | Filter by time |
 | `fam log export --format json` | Export audit log to JSON |
 | `fam log export --format csv -o audit.csv` | Export to CSV file |
+
+### Drift Detection
+
+| Command | Description |
+|---|---|
+| `fam drift` | Check for config file drift since last `fam apply` |
+| `fam drift --json` | Output drift report as JSON (CI-friendly) |
+| `fam drift --watch` | Continuously monitor for drift (polls every 5s) |
+
+Exits with code 2 when drift is detected, making it usable in CI pipelines.
 
 ### Global Options
 
@@ -225,6 +265,13 @@ FAM ships with config generators for these tools out of the box:
 | VS Code (Copilot) | `vscode` | `.vscode/mcp.json` |
 | OpenHands | `openhands` | `~/.openhands/config.toml` |
 | OpenCode | `opencode` | `~/.config/opencode/opencode.json` |
+| Windsurf | `windsurf` | `~/.codeium/windsurf/mcp_config.json` |
+| Zed | `zed` | `~/Library/Application Support/Zed/settings.json` |
+| Cline | `cline` | `cline_mcp_settings.json` |
+| Roo Code | `roo_code` | `.roo/mcp.json` |
+| Gemini CLI | `gemini_cli` | `~/.gemini/settings.json` |
+| GitHub Copilot | `github_copilot` | `~/.copilot/mcp-config.json` |
+| Amazon Q | `amazon_q` | `~/.aws/amazonq/agents/default.json` |
 | Any MCP client | `generic` | `~/.fam/configs/<profile>.json` |
 
 Any tool that speaks MCP can connect to FAM. If your tool isn't listed above, use the `generic` config target and point it at `http://localhost:7865/mcp`.
@@ -241,8 +288,13 @@ When a tool connects to FAM, it sees these built-in tools alongside the proxied 
 | `fam__log_action` | Report a significant action for the audit trail |
 | `fam__list_servers` | List available MCP servers and their status |
 | `fam__health` | Check daemon health, server reachability, uptime |
+| `fam__get_knowledge` | Retrieve a knowledge entry by key |
+| `fam__set_knowledge` | Store a knowledge entry (upsert with full-text search) |
+| `fam__search_knowledge` | Full-text search across knowledge entries |
+| `fam__get_audit_log` | Query the audit trail with filters |
+| `fam__list_profiles` | List all configured profiles with access details |
 
-These tools help agents understand their environment and report their actions.
+These tools help agents understand their environment, share knowledge, and report their actions.
 
 ---
 
@@ -254,6 +306,7 @@ These tools help agents understand their environment and report their actions.
 | `~/.fam/state.json` | Last-applied state (for computing diffs) |
 | `~/.fam/sessions.json` | Session token hashes (one per tool profile) |
 | `~/.fam/audit.db` | SQLite audit log (every proxied call) |
+| `~/.fam/knowledge.db` | SQLite knowledge store (shared agent learnings) |
 | `~/.fam/fam.pid` | Daemon process ID (when running) |
 | `~/.fam/configs/` | Generated config files for tools |
 | `~/.fam/instructions/` | Generated FAM.md instruction files per profile |
