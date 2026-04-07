@@ -236,11 +236,10 @@ export class McpProxy {
 
   /**
    * Get tool definitions for a specific namespace (used during reload).
+   * Uses unfiltered access — not scoped by any profile.
    */
   getToolsForNamespace(namespace: string): ToolDefinition[] {
-    return this.registry.getToolsForProfile('').filter(
-      (t) => t.name.startsWith(`${namespace}__`),
-    )
+    return this.registry.getToolsByNamespace(namespace)
   }
 
   /**

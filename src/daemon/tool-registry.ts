@@ -154,6 +154,31 @@ export class ToolRegistry {
   }
 
   /**
+   * Get all registered tools as ToolDefinition[] (unfiltered by profile).
+   * Used during hot-reload to copy tools into a new registry.
+   */
+  getAllTools(): ToolDefinition[] {
+    return [...this.tools.values()].map((entry) => ({
+      name: entry.namespacedName,
+      description: entry.description,
+      inputSchema: entry.inputSchema,
+    }))
+  }
+
+  /**
+   * Get all tools for a specific namespace (unfiltered by profile).
+   */
+  getToolsByNamespace(namespace: string): ToolDefinition[] {
+    return [...this.tools.values()]
+      .filter((entry) => entry.namespace === namespace)
+      .map((entry) => ({
+        name: entry.namespacedName,
+        description: entry.description,
+        inputSchema: entry.inputSchema,
+      }))
+  }
+
+  /**
    * Get total count of registered tools (upstream + native).
    */
   getToolCount(): number {
