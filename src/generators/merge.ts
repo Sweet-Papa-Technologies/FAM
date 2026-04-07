@@ -4,6 +4,10 @@
  * Provides detection, backup, and application logic for the I/O/S
  * (Import / Overwrite / Skip) merge strategy described in DESIGN.md Section 8.2.
  *
+ * The "import_and_manage" strategy performs a deep merge: FAM's generated
+ * keys are injected into the existing config file, preserving all other
+ * user settings. FAM keys win on conflict.
+ *
  * NOTE: This module performs file I/O (unlike the pure generator functions).
  * The actual interactive prompt (I/O/S choice) lives in the CLI layer.
  */
@@ -84,21 +88,59 @@ export function createBackup(targetPath: string): string {
   return backupPath
 }
 
+// ─── Deep Merge ──────────────────────────────────────────────────
+
+/**
+ * Deep-merge two objects. Values from `overlay` win on conflict.
+ * Arrays are replaced (not concatenated). Null/undefined in overlay
+ * are treated as intentional overrides.
+ */
+function deepMerge(
+  base: Record<string, unknown>,
+  overlay: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...base }
+
+  for (const [key, value] of Object.entries(overlay)) {
+    const baseVal = result[key]
+
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      baseVal !== null &&
+      typeof baseVal === 'object' &&
+      !Array.isArray(baseVal)
+    ) {
+      // Both are plain objects — recurse
+      result[key] = deepMerge(
+        baseVal as Record<string, unknown>,
+        value as Record<string, unknown>,
+      )
+    } else {
+      // Primitive, array, or type mismatch — overlay wins
+      result[key] = value
+    }
+  }
+
+  return result
+}
+
 // ─── Apply Strategy ───────────────────────────────────────────────
 
 /**
  * Apply a merge strategy to a target config file.
  *
- * - `import_and_manage`: Backup existing, write FAM-only config.
- *   The caller is responsible for extracting existing servers and adding
- *   them to fam.yaml — this function only handles the file operations.
+ * - `import_and_manage`: Backup existing, then deep-merge FAM's
+ *   generated keys into the existing config. All existing user
+ *   settings are preserved; FAM keys win on conflict.
  *
- * - `overwrite`: Backup existing, write FAM-only config.
+ * - `overwrite`: Backup existing, replace entirely with FAM config.
  *
  * - `skip`: Do nothing.
  *
  * @param targetPath - Absolute path to the config file
- * @param famContent - The FAM-only config content string to write
+ * @param famContent - The FAM-generated config content string (JSON)
  * @param strategy - The merge strategy to apply
  */
 export function applyMergeStrategy(
@@ -110,11 +152,30 @@ export function applyMergeStrategy(
     return
   }
 
-  // Both import_and_manage and overwrite: backup then write
+  // Backup existing file
   if (existsSync(targetPath)) {
     createBackup(targetPath)
   }
 
+  if (strategy === 'import_and_manage' && existsSync(targetPath)) {
+    // Read existing config, deep-merge FAM keys into it
+    try {
+      const existingRaw = readFileSync(targetPath, 'utf-8')
+      const existing = JSON.parse(existingRaw) as Record<string, unknown>
+      const famObj = JSON.parse(famContent) as Record<string, unknown>
+
+      const merged = deepMerge(existing, famObj)
+      const mergedContent = JSON.stringify(merged, null, 2) + '\n'
+
+      writeFileSync(targetPath, mergedContent, 'utf-8')
+      chmodSync(targetPath, 0o600)
+      return
+    } catch {
+      // If existing file isn't valid JSON, fall through to overwrite
+    }
+  }
+
+  // Overwrite (or import_and_manage fallback if existing wasn't parseable)
   writeFileSync(targetPath, famContent, 'utf-8')
   chmodSync(targetPath, 0o600)
 }

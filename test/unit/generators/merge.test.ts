@@ -142,19 +142,67 @@ describe('applyMergeStrategy', () => {
     expect(existsSync(`${configPath}.pre-fam`)).toBe(false)
   })
 
-  it('should backup and write FAM config with "import_and_manage" strategy', () => {
+  it('should deep-merge FAM config into existing with "import_and_manage" strategy', () => {
     const configPath = join(testDir, 'settings.json')
-    const oldContent = JSON.stringify({
-      mcpServers: { github: {}, slack: {} },
-    })
+    const existingConfig = {
+      mcpServers: { github: { url: 'http://github.local' }, slack: { url: 'http://slack.local' } },
+      otherSetting: 'preserved',
+    }
+    const oldContent = JSON.stringify(existingConfig)
     writeFileSync(configPath, oldContent)
 
     applyMergeStrategy(configPath, famContent, 'import_and_manage')
 
-    // Original should now contain FAM config
-    expect(readFileSync(configPath, 'utf-8')).toBe(famContent)
+    // Merged file should have BOTH existing keys and FAM keys
+    const merged = JSON.parse(readFileSync(configPath, 'utf-8'))
+    expect(merged.mcpServers.fam).toBeDefined()
+    expect(merged.mcpServers.fam.url).toBe('http://localhost:7865/mcp')
+    expect(merged.mcpServers.github.url).toBe('http://github.local')
+    expect(merged.mcpServers.slack.url).toBe('http://slack.local')
+    expect(merged.otherSetting).toBe('preserved')
+
     // Backup should exist with old content
     expect(readFileSync(`${configPath}.pre-fam`, 'utf-8')).toBe(oldContent)
+  })
+
+  it('should preserve deeply nested existing config during merge', () => {
+    const configPath = join(testDir, 'opencode.json')
+    const existingConfig = {
+      provider: {
+        lmstudio: {
+          npm: '@ai-sdk/openai-compatible',
+          options: { baseURL: 'http://192.168.1.99:11435/v1' },
+        },
+      },
+      model: 'lmstudio/gemma-4-26b',
+    }
+    writeFileSync(configPath, JSON.stringify(existingConfig))
+
+    const famOpenCodeContent = JSON.stringify({
+      mcp: {
+        fam: { type: 'remote', url: 'http://127.0.0.1:7865/mcp', enabled: true },
+      },
+    })
+
+    applyMergeStrategy(configPath, famOpenCodeContent, 'import_and_manage')
+
+    const merged = JSON.parse(readFileSync(configPath, 'utf-8'))
+    // FAM's MCP entry injected
+    expect(merged.mcp.fam.url).toBe('http://127.0.0.1:7865/mcp')
+    // Existing provider config preserved
+    expect(merged.provider.lmstudio.npm).toBe('@ai-sdk/openai-compatible')
+    expect(merged.model).toBe('lmstudio/gemma-4-26b')
+  })
+
+  it('should fall back to overwrite when existing file is not valid JSON', () => {
+    const configPath = join(testDir, 'broken.json')
+    writeFileSync(configPath, 'not valid json {{{')
+
+    applyMergeStrategy(configPath, famContent, 'import_and_manage')
+
+    // Should have written FAM content (fallback)
+    const result = JSON.parse(readFileSync(configPath, 'utf-8'))
+    expect(result.mcpServers.fam).toBeDefined()
   })
 
   it('should write FAM config to new path when no existing file', () => {
