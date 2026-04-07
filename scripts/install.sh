@@ -150,6 +150,25 @@ info "Creating data directory at $FAM_HOME ..."
 mkdir -p "$FAM_HOME"
 chmod 700 "$FAM_HOME"
 
+# If running as root (sudo), fix ownership so the real user can access ~/.fam
+# and the lib directory. Without this, files end up owned by root and
+# `fam init` / `fam knowledge set` fail with EACCES.
+if [[ "$EUID" -eq 0 && -n "$SUDO_USER" ]]; then
+  REAL_USER="$SUDO_USER"
+  REAL_HOME=$(eval echo "~$REAL_USER")
+  REAL_FAM_HOME="$REAL_HOME/.fam"
+
+  if [[ -d "$REAL_FAM_HOME" ]]; then
+    info "Fixing ownership of $REAL_FAM_HOME for $REAL_USER ..."
+    chown -R "$REAL_USER" "$REAL_FAM_HOME"
+  fi
+
+  # Also fix the lib dir so npm can read it
+  if [[ -d "$LIB_DIR" ]]; then
+    chmod -R a+rX "$LIB_DIR"
+  fi
+fi
+
 # ─── PATH Check ──────────────────────────────────────────────────
 
 if ! echo "$PATH" | tr ':' '\n' | grep -qx "$BIN_DIR"; then
