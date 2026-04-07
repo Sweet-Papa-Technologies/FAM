@@ -131,13 +131,18 @@ cd "$PROJECT_ROOT"
 # Make the entry point executable
 chmod +x "$LIB_DIR/dist/index.js"
 
-# Create symlink
+# Create wrapper script (more robust than symlink for ESM + shebang)
 if [[ -L "$BIN_DIR/fam" || -f "$BIN_DIR/fam" ]]; then
   warn "Replacing existing $BIN_DIR/fam"
   rm -f "$BIN_DIR/fam"
 fi
-ln -s "$LIB_DIR/dist/index.js" "$BIN_DIR/fam"
-dim "Symlink: $BIN_DIR/fam -> $LIB_DIR/dist/index.js"
+
+cat > "$BIN_DIR/fam" << WRAPPER
+#!/usr/bin/env bash
+exec node "$LIB_DIR/dist/index.js" "\$@"
+WRAPPER
+chmod +x "$BIN_DIR/fam"
+dim "Wrapper: $BIN_DIR/fam -> node $LIB_DIR/dist/index.js"
 
 # ─── Data Directory ──────────────────────────────────────────────
 
