@@ -209,6 +209,28 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 | `fam mcp remove <name>` | Remove an MCP server |
 | `fam mcp list` | List configured MCP servers |
 
+**Adding an MCP server via CLI:**
+
+```bash
+# Add a stdio server (e.g., Playwright)
+fam mcp add playwright \
+  --transport stdio \
+  --command npx \
+  --args "@playwright/mcp@latest" \
+  --description "Playwright browser automation"
+
+# Add an HTTP/SSE server (e.g., GitHub)
+fam mcp add github \
+  --transport sse \
+  --url https://api.githubcopilot.com/mcp/ \
+  --credential github-pat \
+  --description "GitHub repos, issues, PRs"
+
+# Then add it to a profile's allowed_servers in fam.yaml and apply
+fam plan
+fam apply
+```
+
 ### Knowledge Commands
 
 | Command | Description |
