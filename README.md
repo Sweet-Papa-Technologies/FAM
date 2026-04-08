@@ -60,19 +60,30 @@ No root/sudo required. See [installation docs](docs/user/installation.md) for al
 | `fam init` interactive setup | Tested | Tool selection, MCP config import, scaffold generation |
 | Hot-reload on config change | Tested | POST /api/v1/reload preserves upstream connections |
 
-### Not Yet Tested / In Progress
+### Docker E2E (52 pass, 0 fail, 1 skip)
+
+Run via `npm run test:docker` — spins up a Linux container with Node 22, real gnome-keyring, and installs real agents.
 
 | Feature | Status | Notes |
 |---|---|---|
-| LLM model config applied to agents | Not tested | Generators produce correct output (unit tested) but not verified end-to-end with live agents |
+| CLI lifecycle (plan/apply/validate/status/drift) | Tested | 7 tests, full Terraform-style workflow |
+| MCP daemon protocol | Tested | 12 tests: health, tools/list, tools/call, auth, native tools, shutdown |
+| Config generation (all 17 agents) | Tested | Every generator produces valid output with correct structure |
+| Linux keychain (gnome-keyring) | Tested | 5 tests: set/get/delete/overwrite via real libsecret |
+| LLM model config applied to agents | Tested | 8 agents: model provider resolution verified in generated configs |
+| Claude Code integration | Tested | Installed in container, config generated and verified |
+| Aider integration | Tested | pip installed, `.aider.conf.yml` generated and verified |
+| OpenClaw integration | Tested | npm installed, `openclaw.json` + `models.yaml` generated and verified |
+| OpenHands integration | Skipped | pip dependency conflict (upstream issue) |
+
+### Not Yet Tested
+
+| Feature | Status | Notes |
+|---|---|---|
 | OAuth2 credential flow | Not tested | Code complete, browser flow + token refresh not verified |
-| Linux keychain (libsecret) | Not tested | Builds on Linux, keychain integration not verified |
 | Windows support | Not tested | PowerShell install script exists, not verified |
 | Multi-machine sync (git) | Not implemented | Planned for v1 |
 | Config drift watch mode | Partial | `fam drift` works, `--watch` polling not verified |
-| Knowledge store | Partial | SQLite store works, native tool integration not verified end-to-end |
-| OpenClaw integration | Not tested | Generator complete, not verified with live OpenClaw |
-| NemoClaw integration | Not tested | Generator complete, not verified with live NemoClaw |
 
 ## Supported Agents
 
@@ -109,9 +120,11 @@ No root/sudo required. See [installation docs](docs/user/installation.md) for al
 - [x] LLM model provider config with role-based assignment
 - [x] Daemon auto-start (launchd / systemd)
 - [x] Config drift detection
-- [ ] End-to-end testing with all major agents
+- [x] Docker E2E test harness (52 tests across 6 categories)
+- [x] Linux platform testing (Docker container with real gnome-keyring)
+- [x] Agent integration testing (Claude Code, Aider, OpenClaw verified)
 - [ ] OAuth2 flow verification
-- [ ] Linux + Windows platform testing
+- [ ] Windows platform testing
 
 ### v0.2
 - [ ] `fam doctor` -- diagnose common issues (keychain access, port conflicts, missing deps)
@@ -150,9 +163,27 @@ See [DESIGN.md](docs/DESIGN.md) for the full architecture, data models, and impl
 ```bash
 git clone https://github.com/Sweet-Papa-Technologies/FAM.git
 cd FAM
+nvm use 22            # FAM requires Node.js >= 22
 npm install
-npm test
+npm test              # 453 unit + E2E tests
 npx tsx src/index.ts --help
+```
+
+### Testing
+
+FAM has three test layers:
+
+| Layer | Command | What It Tests | Requirements |
+|---|---|---|---|
+| Unit tests | `npm test` | 453 tests — config parsing, generators, diff, vault, daemon protocol | Node 22 |
+| Docker E2E | `npm run test:docker` | 52 tests — full lifecycle in Linux container with real keychain + real agents | Docker |
+| Docker (one category) | `bash test/docker-e2e/run.sh vault` | Run a single test category | Docker |
+
+**Docker E2E categories:** `core-cli`, `daemon`, `generators`, `vault`, `agent-integration`, `model-config`
+
+To use a custom LLM endpoint for model config tests:
+```bash
+E2E_LLM_URL=http://localhost:11434/v1 npm run test:docker
 ```
 
 ## License
