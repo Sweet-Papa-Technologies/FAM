@@ -503,6 +503,7 @@ fam init         # Create fam.yaml interactively
 #     args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp/fam-test"]
 #     transport: stdio
 #     description: "Local filesystem"
+fam mcp add filesystem --command npx --args "-y,@modelcontextprotocol/server-filesystem,/tmp/fam-test" --transport stdio --description "Local filesystem"
 
 # 4. Plan and apply
 fam plan                    # Should show additions
