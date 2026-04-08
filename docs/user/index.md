@@ -236,7 +236,7 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 | Command | Description |
 |---|---|
 | `fam secret set <name>` | Store a credential in the OS keychain (hidden input) |
-| `fam secret get <name> --yes` | Print a stored credential (requires `--yes` for safety) |
+| `fam secret get <name> --yes` | Check a credential exists and show masked preview |
 | `fam secret list` | Show all credentials and their status |
 | `fam secret delete <name>` | Remove a credential from the keychain |
 

@@ -362,7 +362,7 @@ This document describes all the test scenarios for validating FAM end-to-end. It
 | # | Test Case | Expected Result | Automated |
 |---|---|---|---|
 | 10.2.1 | `fam secret set <name>` prompts for value | Hidden input, stored in keychain | Manual |
-| 10.2.2 | `fam secret get <name> --yes` prints value | Credential displayed | Manual |
+| 10.2.2 | `fam secret get <name> --yes` prints masked value | First 2 + last 2 chars, rest masked. Full value only via OS keychain tools. | Manual |
 | 10.2.3 | `fam secret list` shows all credentials | Status table | Manual |
 | 10.2.4 | `fam secret delete <name>` removes from keychain | Confirmation + removal | Manual |
 

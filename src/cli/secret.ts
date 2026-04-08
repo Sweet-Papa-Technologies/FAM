@@ -98,7 +98,7 @@ export function registerSecretCommand(program: Command): void {
 
   secret
     .command('get <name>')
-    .description('Retrieve a credential value from the OS keychain')
+    .description('Check if a credential exists and show a masked preview')
     .option('--yes', 'Skip safety confirmation (required for display)')
     .action(async (name: string, opts: { yes?: boolean }) => {
       try {
@@ -121,8 +121,15 @@ export function registerSecretCommand(program: Command): void {
           process.exit(1)
         }
 
-        // Print raw value (for piping / scripting)
-        console.log(value)
+        // Always masked — FAM never exposes full credential values.
+        // Use your OS keychain tool to retrieve full values:
+        //   macOS:  security find-generic-password -s fam -a <name> -w
+        //   Linux:  secret-tool lookup service fam username <name>
+        const masked = value.length <= 6
+          ? '*'.repeat(value.length)
+          : value.slice(0, 2) + '*'.repeat(value.length - 4) + value.slice(-2)
+        console.log(`${name}: ${masked}`)
+        console.log(chalk.dim('Full value available via your OS keychain (Keychain Access, secret-tool, etc.)'))
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error(chalk.red(`Failed to retrieve secret: ${msg}`))
