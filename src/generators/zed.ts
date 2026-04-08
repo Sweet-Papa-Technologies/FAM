@@ -20,6 +20,7 @@ function defaultZedPath(): string {
 
 export function generateZedConfig(input: GeneratorInput): GeneratorOutput {
   const entry = buildFamMcpEntry(input)
+  const warnings: string[] = []
 
   const config = {
     context_servers: {
@@ -31,6 +32,10 @@ export function generateZedConfig(input: GeneratorInput): GeneratorOutput {
     },
   }
 
+  if (input.models?.default) {
+    warnings.push('Zed: Model configuration is managed through Zed settings, not via FAM')
+  }
+
   const outputPath = input.profile.config_target
     ? expandTilde(input.profile.config_target)
     : defaultZedPath()
@@ -39,5 +44,6 @@ export function generateZedConfig(input: GeneratorInput): GeneratorOutput {
     path: outputPath,
     content: JSON.stringify(config, null, 2) + '\n',
     format: 'json',
+    ...(warnings.length > 0 ? { warnings } : {}),
   }
 }

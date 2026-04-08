@@ -51,12 +51,26 @@ export const StdioMcpServerSchema = z.object({
 
 export const McpServerSchema = z.union([HttpMcpServerSchema, StdioMcpServerSchema])
 
+// ─── Model Providers ──────────────────────────────────────────
+
+export const ModelProviderTypeSchema = z.enum([
+  'anthropic', 'openai', 'openai_compatible', 'google', 'amazon_bedrock',
+])
+
+export const ModelProviderSchema = z.object({
+  provider: ModelProviderTypeSchema,
+  credential: z.string().nullable(),
+  base_url: z.string().url().optional(),
+  models: z.record(z.string()),
+})
+
 // ─── Profiles ──────────────────────────────────────────────────
 
 export const ProfileSchema = z.object({
   description: z.string(),
   config_target: z.string(),
   model: z.string().optional(),
+  model_roles: z.record(z.string()).optional(),
   allowed_servers: z.array(z.string()),
   denied_servers: z.array(z.string()).default([]),
   env_inject: z.record(z.string()).optional(),
@@ -115,11 +129,56 @@ export const FamConfigSchema = z.object({
   version: z.string(),
   settings: SettingsSchema.default({}),
   credentials: z.record(CredentialSchema).default({}),
+  models: z.record(ModelProviderSchema).default({}),
   mcp_servers: z.record(McpServerSchema).default({}),
   profiles: z.record(ProfileSchema),
   generators: z.record(GeneratorSchema).default({}),
   native_tools: z.record(NativeToolSchema).default({}),
   instructions: InstructionsSchema.default({}),
+}).superRefine((data, ctx) => {
+  // Validate model provider credential references
+  for (const [providerName, provider] of Object.entries(data.models)) {
+    if (provider.credential && !data.credentials[provider.credential]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Model provider "${providerName}" references unknown credential "${provider.credential}"`,
+        path: ['models', providerName, 'credential'],
+      })
+    }
+  }
+
+  // Validate profile model references (provider/alias format)
+  for (const [profileName, profile] of Object.entries(data.profiles)) {
+    const refs: Array<{ field: string; value: string }> = []
+    if (profile.model?.includes('/')) {
+      refs.push({ field: 'model', value: profile.model })
+    }
+    if (profile.model_roles) {
+      for (const [role, ref] of Object.entries(profile.model_roles)) {
+        if (ref.includes('/')) {
+          refs.push({ field: `model_roles.${role}`, value: ref })
+        }
+      }
+    }
+
+    for (const { field, value } of refs) {
+      const [providerName, alias] = value.split('/', 2)
+      const provider = data.models[providerName]
+      if (!provider) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Profile "${profileName}" references unknown model provider "${providerName}" in ${field}`,
+          path: ['profiles', profileName, field],
+        })
+      } else if (!provider.models[alias]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Profile "${profileName}" references unknown model alias "${alias}" in provider "${providerName}" (${field})`,
+          path: ['profiles', profileName, field],
+        })
+      }
+    }
+  }
 })
 
 // ─── Inferred Types ────────────────────────────────────────────
@@ -127,6 +186,7 @@ export const FamConfigSchema = z.object({
 export type FamConfigZod = z.infer<typeof FamConfigSchema>
 export type CredentialConfigZod = z.infer<typeof CredentialSchema>
 export type McpServerConfigZod = z.infer<typeof McpServerSchema>
+export type ModelProviderConfigZod = z.infer<typeof ModelProviderSchema>
 export type ProfileConfigZod = z.infer<typeof ProfileSchema>
 export type GeneratorConfigZod = z.infer<typeof GeneratorSchema>
 export type NativeToolConfigZod = z.infer<typeof NativeToolSchema>

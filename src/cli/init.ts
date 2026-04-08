@@ -99,6 +99,26 @@ const TOOL_CHOICES: ToolChoice[] = [
     value: 'amazon_q',
     configPaths: ['~/.aws/amazonq/agents/default.json'],
   },
+  {
+    name: 'Aider',
+    value: 'aider',
+    configPaths: ['~/.aider.conf.yml'],
+  },
+  {
+    name: 'Continue.dev',
+    value: 'continue_dev',
+    configPaths: ['~/.continue/config.yaml', '~/.continue/config.json'],
+  },
+  {
+    name: 'OpenClaw',
+    value: 'openclaw',
+    configPaths: ['~/.openclaw/openclaw.json'],
+  },
+  {
+    name: 'NemoClaw (NVIDIA)',
+    value: 'nemoclaw',
+    configPaths: ['~/.nemoclaw/openclaw.json'],
+  },
 ]
 
 // ---- Generator Defaults (output path + format per tool) ---------------------
@@ -116,6 +136,10 @@ const GENERATOR_DEFAULTS: Record<string, { output: string; format: string }> = {
   gemini_cli:     { output: '~/.gemini/settings.json', format: 'gemini_mcp_config' },
   github_copilot: { output: '~/.copilot/mcp-config.json', format: 'github_copilot_mcp_config' },
   amazon_q:       { output: '~/.aws/amazonq/agents/default.json', format: 'amazon_q_config' },
+  aider:          { output: '~/.aider.conf.yml', format: 'aider_config' },
+  continue_dev:   { output: '~/.continue/config.yaml', format: 'continue_config' },
+  openclaw:       { output: '~/.openclaw/openclaw.json', format: 'openclaw_config' },
+  nemoclaw:       { output: '~/.nemoclaw/openclaw.json', format: 'nemoclaw_config' },
 }
 
 // ---- Helpers ----------------------------------------------------------------
@@ -222,6 +246,9 @@ function buildScaffold(
     }
   }
   config['mcp_servers'] = mcpServers
+
+  // Models section (commented scaffold for user to fill in)
+  config['models'] = {}
 
   // Profiles from selected tools
   const profiles: Record<string, unknown> = {}

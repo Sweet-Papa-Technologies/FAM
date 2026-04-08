@@ -29,6 +29,7 @@ import {
   computeDiff,
   formatDiff,
   expandTilde,
+  resolveProfileModels,
 } from '../config/index.js'
 import type {
   FamConfig,
@@ -36,8 +37,10 @@ import type {
   PlanDiff,
   GeneratedConfigState,
   CredentialState,
+  ModelState,
   ProfileState,
   ServerState,
+  ResolvedModelSet,
   HttpServerConfig,
   StdioServerConfig,
 } from '../config/index.js'
@@ -185,6 +188,22 @@ async function executeApply(
     }
   }
 
+  // 4b. Resolve model configurations for all profiles
+  const profileModelMap: Record<string, ResolvedModelSet | null> = {}
+  for (const [profileName, profile] of Object.entries(config.profiles)) {
+    if (profile.model || profile.model_roles) {
+      try {
+        profileModelMap[profileName] = await resolveProfileModels(profileName, config, vault)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.log(chalk.yellow(`  Warning: Could not resolve models for "${profileName}": ${msg}`))
+        profileModelMap[profileName] = null
+      }
+    } else {
+      profileModelMap[profileName] = null
+    }
+  }
+
   // 5. Run generators (with I/O/S merge for first-time)
   const generatedConfigs: Record<string, GeneratedConfigState> = {
     ...currentState.generated_configs,
@@ -213,7 +232,15 @@ async function executeApply(
       settings: config.settings,
       sessionToken: profileTokenMap[_profileName] ?? '',
       daemonUrl,
+      models: profileModelMap[_profileName] ?? null,
     })
+
+    // Print any generator warnings
+    if (output.warnings) {
+      for (const w of output.warnings) {
+        console.log(chalk.yellow(`  Note: ${w}`))
+      }
+    }
 
     const targetPath = expandTilde(generator.output)
     const isNew = !generatedConfigs[genName]
@@ -354,6 +381,7 @@ async function executeApply(
       last_applied: new Date().toISOString(),
       applied_config_hash: hashString(JSON.stringify(config)),
       credentials: buildCredentialState(config, vault),
+      models: buildModelState(config),
       mcp_servers: buildServerState(config),
       profiles: buildProfileState(config, sessions),
       generated_configs: generatedConfigs,
@@ -423,6 +451,18 @@ function buildCredentialState(
       ...(cred.type === 'api_key' && cred.rotate_after_days
         ? { rotate_after_days: cred.rotate_after_days }
         : {}),
+    }
+  }
+  return state
+}
+
+function buildModelState(config: FamConfig): Record<string, ModelState> {
+  const state: Record<string, ModelState> = {}
+  for (const [name, provider] of Object.entries(config.models ?? {})) {
+    state[name] = {
+      provider: provider.provider,
+      credential: provider.credential,
+      model_aliases: Object.keys(provider.models),
     }
   }
   return state

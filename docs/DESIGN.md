@@ -176,8 +176,9 @@ $ fam plan
 ├─ Load ~/.fam/state.json (last applied state)
 ├─ Diff each section:
 │   ├─ credentials: declared vs stored in keychain
+│   ├─ models: providers, credential bindings, model aliases
 │   ├─ mcp_servers: URLs, transports, credential bindings
-│   ├─ profiles: allowed_servers, denied_servers
+│   ├─ profiles: allowed_servers, denied_servers, model references
 │   └─ generated_configs: hash would-be content vs state content_hash
 ├─ Format and print diff (Terraform-style + / ~ / - markers)
 └─ Print summary: "N to add, N to change, N to destroy"
@@ -187,7 +188,8 @@ $ fam apply
 ├─ Run plan (same diff calculation)
 ├─ Prompt for confirmation if destructive changes
 ├─ For each new credential: prompt for value, store in keychain
-├─ For each config generator:
+├─ Resolve model references (provider/alias → model ID + API key from vault)
+├─ For each config generator (now receives resolved model config):
 │   ├─ First time + existing file? → interactive I/O/S prompt
 │   ├─ Subsequent runs → upsert FAM entry silently
 │   └─ Write generated config to target path
@@ -253,10 +255,21 @@ export function writeState(famDir: string, state: State): void
 
 // config/diff.ts
 export function computeDiff(desired: FamConfig, current: State): PlanDiff
-// Returns structured diff with add/change/remove for each section.
+// Returns structured diff with add/change/remove for each section
+// (credentials, models, servers, profiles, configs).
 
 export function formatDiff(diff: PlanDiff): string
 // Returns human-readable Terraform-style plan output.
+
+// config/models.ts — Model reference resolution
+export function parseModelRef(ref: string): { provider: string; alias: string } | null
+// Parses "provider/alias" format. Returns null for bare strings.
+
+export function resolveProfileModels(
+  profileName: string, config: FamConfig, vault: CredentialVault
+): Promise<ResolvedModelSet | null>
+// Resolves all model references for a profile into concrete model IDs
+// and API keys from the vault. Returns null if no model config.
 ```
 
 #### `daemon/` — MCP Proxy Daemon
@@ -353,37 +366,52 @@ export function injectCredential(
 
 #### `generators/` — Config File Generators
 
-Pure functions. No side effects. Each takes a profile + settings, returns file content.
+Pure functions. No side effects. Each takes a profile + settings + resolved models, returns file content.
 
 ```typescript
-// generators/base.ts
+// generators/types.ts
 export interface GeneratorInput {
   profile: ProfileConfig
   settings: GlobalSettings
   sessionToken: string
-  daemonUrl: string       // e.g., "http://localhost:7865"
+  daemonUrl: string                // e.g., "http://localhost:7865"
+  models?: ResolvedModelSet | null // Resolved model config with API keys
 }
 
 export interface GeneratorOutput {
   path: string            // Absolute target path (~ expanded)
   content: string         // File content to write (JSON, TOML, etc.)
   format: string          // For logging: "json", "toml", etc.
+  warnings?: string[]     // Info messages (e.g., "model config is GUI-only")
 }
 
-// generators/claude-code.ts
+// generators/claude-code.ts — env block with ANTHROPIC_* vars + MCP
 export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput
 
-// generators/cursor.ts
-export function generateCursorConfig(input: GeneratorInput): GeneratorOutput
+// generators/opencode.ts — providers + agents sections + MCP
+export function generateOpenCodeConfig(input: GeneratorInput): GeneratorOutput
 
-// generators/vscode.ts
-export function generateVSCodeConfig(input: GeneratorInput): GeneratorOutput
-
-// generators/openhands.ts
+// generators/openhands.ts — [llm] section + [mcp]
 export function generateOpenHandsConfig(input: GeneratorInput): GeneratorOutput
 
-// generators/generic.ts
-export function generateGenericConfig(input: GeneratorInput): GeneratorOutput
+// generators/aider.ts — .aider.conf.yml with model/editor-model/weak-model
+export function generateAiderConfig(input: GeneratorInput): GeneratorOutput
+
+// generators/continue-dev.ts — config.yaml with models[] + mcpServers
+export function generateContinueDevConfig(input: GeneratorInput): GeneratorOutput
+
+// generators/openclaw.ts — openclaw.json (mcpServers + providers) + models.yaml (tiers)
+export function generateOpenClawConfig(input: GeneratorInput): GeneratorOutput
+export function generateOpenClawModelsYaml(input: GeneratorInput): GeneratorOutput | null
+
+// generators/nemoclaw.ts — openclaw.json (mcpServers) + env var hints
+export function generateNemoClawConfig(input: GeneratorInput): GeneratorOutput
+
+// generators/cursor.ts, vscode.ts, windsurf.ts, zed.ts — MCP only
+// generators/cline.ts — partial model support via cline.* settings
+// generators/gemini-cli.ts — model.name in settings
+// generators/github-copilot.ts, amazon-q.ts — env var hints
+// generators/generic.ts — minimal JSON for custom tools
 
 // generators/instructions.ts
 export function generateInstructionFile(input: InstructionInput): GeneratorOutput
@@ -464,12 +492,26 @@ const StdioMcpServerSchema = z.object({
 
 const McpServerSchema = z.union([HttpMcpServerSchema, StdioMcpServerSchema])
 
+// ─── Model Providers ──────────────────────────────────────────
+
+const ModelProviderTypeSchema = z.enum([
+  'anthropic', 'openai', 'openai_compatible', 'google', 'amazon_bedrock',
+])
+
+const ModelProviderSchema = z.object({
+  provider: ModelProviderTypeSchema,
+  credential: z.string().nullable(),       // References credentials.<name>
+  base_url: z.string().url().optional(),   // For proxies / custom endpoints
+  models: z.record(z.string()),            // alias → actual model ID
+})
+
 // ─── Profiles ──────────────────────────────────────────────────
 
 const ProfileSchema = z.object({
   description: z.string(),
   config_target: z.string(),               // Generator name
-  model: z.string().optional(),            // Informational only
+  model: z.string().optional(),            // "provider/alias" or bare string
+  model_roles: z.record(z.string()).optional(), // role → "provider/alias"
   allowed_servers: z.array(z.string()),
   denied_servers: z.array(z.string()).default([]),
   env_inject: z.record(z.string()).optional(),  // "KEY": "credential:<name>" or literal
@@ -528,12 +570,16 @@ export const FamConfigSchema = z.object({
   version: z.string(),
   settings: SettingsSchema.default({}),
   credentials: z.record(CredentialSchema).default({}),
+  models: z.record(ModelProviderSchema).default({}),
   mcp_servers: z.record(McpServerSchema).default({}),
   profiles: z.record(ProfileSchema),
   generators: z.record(GeneratorSchema).default({}),
   native_tools: z.record(NativeToolSchema).default({}),
   instructions: InstructionsSchema.default({}),
 })
+// Cross-field validation via .superRefine():
+// - Model provider credentials must exist in credentials section
+// - Profile model refs ("provider/alias") must resolve to valid entries
 
 export type FamConfig = z.infer<typeof FamConfigSchema>
 ```
@@ -553,6 +599,12 @@ interface State {
     rotate_after_days?: number
     token_expires?: string                 // OAuth only, ISO 8601
     refresh_token_exists?: boolean         // OAuth only
+  }>
+
+  models: Record<string, {
+    provider: string                       // e.g., "anthropic", "openai"
+    credential: string | null              // credential name (not value)
+    model_aliases: string[]                // e.g., ["sonnet", "opus", "haiku"]
   }>
 
   mcp_servers: Record<string, {

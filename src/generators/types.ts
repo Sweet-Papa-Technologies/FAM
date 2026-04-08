@@ -6,7 +6,7 @@
  * (generators module interface).
  */
 
-import type { ProfileConfig, GlobalSettings } from '../config/types.js'
+import type { ProfileConfig, GlobalSettings, ResolvedModelSet } from '../config/types.js'
 
 // ─── Generator Input/Output ────────────────────────────────────────
 
@@ -15,12 +15,14 @@ export interface GeneratorInput {
   settings: GlobalSettings
   sessionToken: string
   daemonUrl: string
+  models?: ResolvedModelSet | null
 }
 
 export interface GeneratorOutput {
   path: string
   content: string
   format: string
+  warnings?: string[]
 }
 
 // ─── Instruction File Input ────────────────────────────────────────

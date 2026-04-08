@@ -57,6 +57,16 @@ credentials:
     description: "Stanford GitLab PAT"
     env_var: GITLAB_TOKEN
 
+# ─── Model Providers ───────────────────────────────────────────
+models:
+  anthropic:
+    provider: anthropic
+    credential: anthropic-key
+    models:
+      sonnet: claude-sonnet-4-20250514
+      opus: claude-opus-4-20250514
+      haiku: claude-haiku-4-5-20251001
+
 # ─── MCP Servers ────────────────────────────────────────────────
 # These are the upstream MCP servers FAM proxies to.
 # Each gets a namespace (e.g., localhost:7865/github/...)

@@ -21,9 +21,10 @@ docs/requirements-design.md explains the product vision and feature scope.
 ## Key Files
 
 - `src/cli/` — CLI commands (Commander)
-- `src/config/` — YAML schema, parser, state, diff engine
+- `src/config/` — YAML schema, parser, state, diff engine, model resolution
+- `src/config/models.ts` — Model reference resolution (provider/alias → model ID + API key)
 - `src/daemon/` — Fastify MCP proxy server
-- `src/generators/` — Config file generators
+- `src/generators/` — Config file generators (MCP + LLM model config per agent)
 - `src/vault/` — OS keychain credential management
 - `src/audit/` — SQLite audit logging
 - `src/utils/` — Shared utilities (errors, logger, paths, crypto)

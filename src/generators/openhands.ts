@@ -22,21 +22,31 @@ export function generateOpenHandsConfig(input: GeneratorInput): GeneratorOutput 
   const mcpUrl = input.daemonUrl.replace(/\/$/, '') + '/mcp'
   const lines: string[] = []
 
-  // If the profile has env_inject with model config, include the [llm] section
-  const envInject = input.profile.env_inject
-  if (envInject) {
-    const apiKey = envInject['api_key'] ?? envInject['OPENAI_API_KEY'] ?? envInject['ANTHROPIC_API_KEY']
-    const model = input.profile.model ?? envInject['model']
+  // Model configuration: prefer resolved models, fall back to env_inject
+  if (input.models?.default) {
+    const m = input.models.default
+    lines.push('[llm]')
+    if (m.api_key) lines.push(`api_key = ${tomlString(m.api_key)}`)
+    lines.push(`model = ${tomlString(m.model_id)}`)
+    if (m.base_url) lines.push(`base_url = ${tomlString(m.base_url)}`)
+    lines.push('')
+  } else {
+    // Legacy env_inject-based model config (backward compat)
+    const envInject = input.profile.env_inject
+    if (envInject) {
+      const apiKey = envInject['api_key'] ?? envInject['OPENAI_API_KEY'] ?? envInject['ANTHROPIC_API_KEY']
+      const model = input.profile.model ?? envInject['model']
 
-    if (apiKey || model) {
-      lines.push('[llm]')
-      if (apiKey) {
-        lines.push(`api_key = ${tomlString(apiKey)}`)
+      if (apiKey || model) {
+        lines.push('[llm]')
+        if (apiKey) {
+          lines.push(`api_key = ${tomlString(apiKey)}`)
+        }
+        if (model) {
+          lines.push(`model = ${tomlString(model)}`)
+        }
+        lines.push('')
       }
-      if (model) {
-        lines.push(`model = ${tomlString(model)}`)
-      }
-      lines.push('')
     }
   }
 

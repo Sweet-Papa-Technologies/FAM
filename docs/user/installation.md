@@ -15,6 +15,25 @@ There are two ways to install FAM: from npm (recommended) or building from sourc
 
 ---
 
+## No Root Required
+
+FAM is designed to run entirely as your normal user — no `sudo`, no admin privileges, no elevation.
+
+- **Credentials**: `@napi-rs/keyring` uses your **user-level** OS keychain (macOS login keychain, Linux GNOME Keyring / KDE Wallet, Windows Credential Manager). These are per-user by default — no system keychain access needed.
+- **Daemon**: Binds to `localhost:7865` (port > 1024, no root needed). Runs as a user process.
+- **Auto-start**: Uses user-level service managers (`~/Library/LaunchAgents` on macOS, `~/.config/systemd/user/` on Linux) — not system-level daemons.
+- **Data directory**: Everything lives in `~/.fam/` with owner-only permissions (`chmod 700`).
+- **Install location**: Use `--prefix ~` to install to `~/bin/` instead of `/usr/local/bin/`:
+
+```bash
+# No sudo needed
+./scripts/install.sh --prefix ~
+```
+
+The *only* scenario that needs `sudo` is installing to a system directory like `/usr/local/bin`, which is the default prefix. If you use `--prefix ~` or install via `npm install -g` with a user-writable npm prefix, no elevation is ever required.
+
+---
+
 ## Option 1: Install from npm
 
 ```bash
@@ -86,6 +105,12 @@ This compiles TypeScript to JavaScript in the `dist/` directory. You can then ru
 
 ```bash
 node dist/index.js --help
+```
+
+Or use the install script (no sudo needed with `--prefix ~`):
+
+```bash
+./scripts/install.sh --prefix ~    # Installs to ~/bin/fam
 ```
 
 Or link it globally:

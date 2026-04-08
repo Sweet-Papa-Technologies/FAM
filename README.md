@@ -24,7 +24,8 @@ fam daemon start
 
 ## What FAM Does
 
-- **Single YAML config** -> generates tool-specific configs for Claude Code, Cursor, VS Code, OpenHands, and more
+- **Single YAML config** -> generates tool-specific configs for Claude Code, Cursor, VS Code, OpenHands, Aider, Continue.dev, and more
+- **LLM model management** -> define providers and models centrally, assign to agents with role-based config (coder/editor/fast/powerful)
 - **OS keychain vault** -> credentials stored securely, injected at runtime, never in config files
 - **MCP proxy daemon** -> one endpoint (`localhost:7865`) proxies all MCP servers with per-tool scoping
 - **Audit logging** -> every proxied call logged with timestamp, caller, target, and status

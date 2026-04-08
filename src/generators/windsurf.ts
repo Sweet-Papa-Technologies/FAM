@@ -11,6 +11,7 @@ import { expandTilde } from '../utils/paths.js'
 
 export function generateWindsurfConfig(input: GeneratorInput): GeneratorOutput {
   const entry = buildFamMcpEntry(input)
+  const warnings: string[] = []
 
   const config = {
     mcpServers: {
@@ -22,6 +23,10 @@ export function generateWindsurfConfig(input: GeneratorInput): GeneratorOutput {
     },
   }
 
+  if (input.models?.default) {
+    warnings.push('Windsurf: Model configuration is not supported by FAM. Configure models in the Windsurf UI.')
+  }
+
   const outputPath = input.profile.config_target
     ? expandTilde(input.profile.config_target)
     : expandTilde('~/.codeium/windsurf/mcp_config.json')
@@ -30,5 +35,6 @@ export function generateWindsurfConfig(input: GeneratorInput): GeneratorOutput {
     path: outputPath,
     content: JSON.stringify(config, null, 2) + '\n',
     format: 'json',
+    ...(warnings.length > 0 ? { warnings } : {}),
   }
 }

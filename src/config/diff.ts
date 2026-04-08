@@ -65,6 +65,50 @@ function diffCredentials(desired: FamConfig, current: State): SectionDiff {
   return diff
 }
 
+// ─── Model Provider Diff ────────────────────────────────────────
+
+function diffModels(desired: FamConfig, current: State): SectionDiff {
+  const diff = emptySectionDiff()
+  const desiredNames = new Set(Object.keys(desired.models ?? {}))
+  const currentNames = new Set(Object.keys(current.models ?? {}))
+
+  for (const name of desiredNames) {
+    const provider = desired.models[name]
+    const aliases = Object.keys(provider.models).join(', ')
+
+    if (!currentNames.has(name)) {
+      diff.added.push({ name, detail: `${provider.provider} (${aliases})` })
+    } else {
+      const currentModel = current.models[name]
+      const changes: string[] = []
+
+      if (provider.provider !== currentModel.provider) {
+        changes.push(`provider: ${currentModel.provider} -> ${provider.provider}`)
+      }
+      if ((provider.credential ?? null) !== (currentModel.credential ?? null)) {
+        changes.push('credential changed')
+      }
+      const currentAliases = [...currentModel.model_aliases].sort()
+      const desiredAliases = Object.keys(provider.models).sort()
+      if (JSON.stringify(currentAliases) !== JSON.stringify(desiredAliases)) {
+        changes.push(`models: ${aliases}`)
+      }
+
+      if (changes.length > 0) {
+        diff.changed.push({ name, detail: changes.join(', ') })
+      }
+    }
+  }
+
+  for (const name of currentNames) {
+    if (!desiredNames.has(name)) {
+      diff.removed.push({ name, detail: 'will be removed' })
+    }
+  }
+
+  return diff
+}
+
 // ─── MCP Server Diff ────────────────────────────────────────────
 
 function serverSummary(server: McpServerConfig): string {
@@ -213,24 +257,28 @@ function diffConfigs(desired: FamConfig, current: State): SectionDiff {
  */
 export function computeDiff(desired: FamConfig, current: State): PlanDiff {
   const credentials = diffCredentials(desired, current)
+  const models = diffModels(desired, current)
   const servers = diffServers(desired, current)
   const profiles = diffProfiles(desired, current)
   const configs = diffConfigs(desired, current)
 
   const toAdd =
     credentials.added.length +
+    models.added.length +
     servers.added.length +
     profiles.added.length +
     configs.added.length
 
   const toChange =
     credentials.changed.length +
+    models.changed.length +
     servers.changed.length +
     profiles.changed.length +
     configs.changed.length
 
   const toRemove =
     credentials.removed.length +
+    models.removed.length +
     servers.removed.length +
     profiles.removed.length +
     configs.removed.length
@@ -239,6 +287,7 @@ export function computeDiff(desired: FamConfig, current: State): PlanDiff {
 
   return {
     credentials,
+    models,
     servers,
     profiles,
     configs,
@@ -296,6 +345,9 @@ export function formatDiff(diff: PlanDiff): string {
 
   const credentialBlock = formatSection('Credential changes', diff.credentials)
   if (credentialBlock) sections.push(credentialBlock)
+
+  const modelBlock = formatSection('Model provider changes', diff.models)
+  if (modelBlock) sections.push(modelBlock)
 
   const serverBlock = formatSection('MCP server changes', diff.servers)
   if (serverBlock) sections.push(serverBlock)

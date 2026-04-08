@@ -11,6 +11,7 @@ import { expandTilde } from '../utils/paths.js'
 
 export function generateAmazonQConfig(input: GeneratorInput): GeneratorOutput {
   const entry = buildFamMcpEntry(input)
+  const warnings: string[] = []
 
   const config = {
     mcpServers: {
@@ -22,6 +23,10 @@ export function generateAmazonQConfig(input: GeneratorInput): GeneratorOutput {
     },
   }
 
+  if (input.models?.default) {
+    warnings.push(`Amazon Q: Set model via CLI: q settings chat.defaultModel "${input.models.default.model_id}"`)
+  }
+
   const outputPath = input.profile.config_target
     ? expandTilde(input.profile.config_target)
     : expandTilde('~/.aws/amazonq/agents/default.json')
@@ -30,5 +35,6 @@ export function generateAmazonQConfig(input: GeneratorInput): GeneratorOutput {
     path: outputPath,
     content: JSON.stringify(config, null, 2) + '\n',
     format: 'json',
+    ...(warnings.length > 0 ? { warnings } : {}),
   }
 }

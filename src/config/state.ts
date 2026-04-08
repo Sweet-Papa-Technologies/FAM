@@ -21,6 +21,7 @@ export function createEmptyState(): State {
     last_applied: '',
     applied_config_hash: '',
     credentials: {},
+    models: {},
     mcp_servers: {},
     profiles: {},
     generated_configs: {},

@@ -30,6 +30,10 @@ export { generateRooCodeConfig } from './roo-code.js'
 export { generateGeminiCliConfig } from './gemini-cli.js'
 export { generateGithubCopilotConfig } from './github-copilot.js'
 export { generateAmazonQConfig } from './amazon-q.js'
+export { generateAiderConfig } from './aider.js'
+export { generateContinueDevConfig } from './continue-dev.js'
+export { generateOpenClawConfig, generateOpenClawModelsYaml } from './openclaw.js'
+export { generateNemoClawConfig } from './nemoclaw.js'
 export { generateInstructionFile } from './instructions.js'
 
 // ─── Merge Utilities ──────────────────────────────────────────────
@@ -56,6 +60,10 @@ import { generateRooCodeConfig } from './roo-code.js'
 import { generateGeminiCliConfig } from './gemini-cli.js'
 import { generateGithubCopilotConfig } from './github-copilot.js'
 import { generateAmazonQConfig } from './amazon-q.js'
+import { generateAiderConfig } from './aider.js'
+import { generateContinueDevConfig } from './continue-dev.js'
+import { generateOpenClawConfig } from './openclaw.js'
+import { generateNemoClawConfig } from './nemoclaw.js'
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
 
@@ -90,4 +98,12 @@ export const generators: Record<string, (input: GeneratorInput) => GeneratorOutp
   github_copilot_mcp_config: generateGithubCopilotConfig,
   amazon_q: generateAmazonQConfig,
   amazon_q_config: generateAmazonQConfig,
+  aider: generateAiderConfig,
+  aider_config: generateAiderConfig,
+  continue_dev: generateContinueDevConfig,
+  continue_config: generateContinueDevConfig,
+  openclaw: generateOpenClawConfig,
+  openclaw_config: generateOpenClawConfig,
+  nemoclaw: generateNemoClawConfig,
+  nemoclaw_config: generateNemoClawConfig,
 }

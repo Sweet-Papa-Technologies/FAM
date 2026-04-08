@@ -12,6 +12,8 @@ export {
   McpServerSchema,
   HttpMcpServerSchema,
   StdioMcpServerSchema,
+  ModelProviderSchema,
+  ModelProviderTypeSchema,
   ProfileSchema,
   GeneratorSchema,
   NativeToolSchema,
@@ -28,6 +30,7 @@ export type {
   FamConfigZod,
   CredentialConfigZod,
   McpServerConfigZod,
+  ModelProviderConfigZod,
   ProfileConfigZod,
   GeneratorConfigZod,
   NativeToolConfigZod,
@@ -44,6 +47,9 @@ export { loadState, writeState, createEmptyState } from './state.js'
 // Diff engine
 export { computeDiff, formatDiff } from './diff.js'
 
+// Model resolution
+export { parseModelRef, resolveModelRef, resolveProfileModels } from './models.js'
+
 // Env var resolution
 export { resolveEnvVars, expandTilde } from './resolve.js'
 
@@ -53,6 +59,10 @@ export type {
   ApiKeyCredConfig,
   OAuthCredConfig,
   CredentialConfig,
+  ModelProviderType,
+  ModelProviderConfig,
+  ResolvedModel,
+  ResolvedModelSet,
   HttpServerConfig,
   StdioServerConfig,
   McpServerConfig,
@@ -66,6 +76,7 @@ export type {
   AuditSettings,
   State,
   CredentialState,
+  ModelState,
   ServerState,
   ProfileState,
   GeneratedConfigState,

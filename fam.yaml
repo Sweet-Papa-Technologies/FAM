@@ -14,6 +14,19 @@ credentials:
     description: "GitHub Personal Access Token"
     env_var: GITHUB_TOKEN
 
+# ─── Model Providers ──────────────────────────────────────────
+# Define LLM providers, credentials, and available models.
+# Profiles reference these as "provider/alias" (e.g. anthropic/sonnet).
+
+# models:
+#   anthropic:
+#     provider: anthropic
+#     credential: anthropic-key
+#     models:
+#       sonnet: claude-sonnet-4-20250514
+#       opus: claude-opus-4-20250514
+#       haiku: claude-haiku-4-5-20251001
+
 mcp_servers:
   filesystem:
     command: npx

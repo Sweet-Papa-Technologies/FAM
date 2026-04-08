@@ -13,6 +13,7 @@ function makeMinimalConfig(overrides?: Partial<FamConfig>): FamConfig {
       audit: { enabled: true, retention_days: 90, export_format: 'json' },
     },
     credentials: {},
+    models: {},
     mcp_servers: {},
     profiles: {
       default: {
@@ -283,6 +284,64 @@ describe('computeDiff', () => {
     expect(diff.summary.toAdd).toBe(2) // new-key + new-server
     expect(diff.summary.toChange).toBe(1) // dev profile
     expect(diff.summary.toRemove).toBe(2) // old-key + old-server
+  })
+
+  it('should detect added model providers', () => {
+    const config = makeMinimalConfig({
+      models: {
+        anthropic: {
+          provider: 'anthropic',
+          credential: null,
+          models: { sonnet: 'claude-sonnet-4' },
+        },
+      },
+    })
+    const emptyState = createEmptyState()
+    const diff = computeDiff(config, emptyState)
+
+    expect(diff.models.added).toHaveLength(1)
+    expect(diff.models.added[0].name).toBe('anthropic')
+    expect(diff.models.added[0].detail).toContain('anthropic')
+  })
+
+  it('should detect removed model providers', () => {
+    const config = makeMinimalConfig()
+    const state = createEmptyState()
+    state.models = {
+      old: {
+        provider: 'openai',
+        credential: null,
+        model_aliases: ['gpt4o'],
+      },
+    }
+    const diff = computeDiff(config, state)
+
+    expect(diff.models.removed).toHaveLength(1)
+    expect(diff.models.removed[0].name).toBe('old')
+  })
+
+  it('should detect changed model providers', () => {
+    const config = makeMinimalConfig({
+      models: {
+        anthropic: {
+          provider: 'anthropic',
+          credential: 'my-key',
+          models: { sonnet: 'claude-sonnet-4', opus: 'claude-opus-4' },
+        },
+      },
+    })
+    const state = createEmptyState()
+    state.models = {
+      anthropic: {
+        provider: 'anthropic',
+        credential: null,
+        model_aliases: ['sonnet'],
+      },
+    }
+    const diff = computeDiff(config, state)
+
+    expect(diff.models.changed).toHaveLength(1)
+    expect(diff.models.changed[0].name).toBe('anthropic')
   })
 
   it('should detect credential type changes', () => {

@@ -47,12 +47,36 @@ export interface StdioServerConfig {
 
 export type McpServerConfig = HttpServerConfig | StdioServerConfig
 
+// ─── Model Config Types ───────────────────────────────────────────
+
+export type ModelProviderType = 'anthropic' | 'openai' | 'openai_compatible' | 'google' | 'amazon_bedrock'
+
+export interface ModelProviderConfig {
+  provider: ModelProviderType
+  credential: string | null
+  base_url?: string
+  models: Record<string, string>   // alias → actual model ID
+}
+
+export interface ResolvedModel {
+  provider: ModelProviderType
+  model_id: string
+  api_key: string | null           // actual value from vault
+  base_url?: string
+}
+
+export interface ResolvedModelSet {
+  default: ResolvedModel
+  roles: Record<string, ResolvedModel>
+}
+
 // ─── Profile Config ────────────────────────────────────────────────
 
 export interface ProfileConfig {
   description: string
   config_target: string
   model?: string
+  model_roles?: Record<string, string>
   allowed_servers: string[]
   denied_servers: string[]
   env_inject?: Record<string, string>
@@ -118,6 +142,7 @@ export interface FamConfig {
   version: string
   settings: GlobalSettings
   credentials: Record<string, CredentialConfig>
+  models: Record<string, ModelProviderConfig>
   mcp_servers: Record<string, McpServerConfig>
   profiles: Record<string, ProfileConfig>
   generators: Record<string, GeneratorConfig>
@@ -159,11 +184,18 @@ export interface GeneratedConfigState {
   strategy: 'import_and_manage' | 'overwrite' | 'skip'
 }
 
+export interface ModelState {
+  provider: string
+  credential: string | null
+  model_aliases: string[]
+}
+
 export interface State {
   version: string
   last_applied: string
   applied_config_hash: string
   credentials: Record<string, CredentialState>
+  models: Record<string, ModelState>
   mcp_servers: Record<string, ServerState>
   profiles: Record<string, ProfileState>
   generated_configs: Record<string, GeneratedConfigState>
@@ -196,6 +228,7 @@ export interface SectionDiff<T = string> {
 
 export interface PlanDiff {
   credentials: SectionDiff
+  models: SectionDiff
   servers: SectionDiff
   profiles: SectionDiff
   configs: SectionDiff

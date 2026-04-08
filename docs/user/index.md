@@ -77,12 +77,17 @@ credentials:
     type: api_key
     description: "GitHub Personal Access Token"
 
-  github-oauth:
-    type: oauth2
-    description: "GitHub OAuth2"
-    provider: github
-    client_id: "your-client-id"
-    scopes: ["repo", "read:user"]
+  anthropic-key:
+    type: api_key
+    description: "Anthropic API Key"
+
+models:
+  anthropic:
+    provider: anthropic
+    credential: anthropic-key
+    models:
+      sonnet: claude-sonnet-4-20250514
+      opus: claude-opus-4-20250514
 
 mcp_servers:
   github:
@@ -101,6 +106,7 @@ profiles:
   claude-code:
     description: "Claude Code"
     config_target: claude_code
+    model: anthropic/sonnet
     allowed_servers: [github, filesystem]
 
 generators:
@@ -109,13 +115,58 @@ generators:
     format: claude_mcp_config
 ```
 
-### Profiles
+### Model Providers
 
-A profile represents one AI tool. It defines which MCP servers that tool can access. When the tool connects to FAM, it only sees the tools it's allowed to use.
+FAM can centrally manage which LLM models your agents use. Define providers once, then assign models to profiles:
+
+```yaml
+models:
+  anthropic:
+    provider: anthropic
+    credential: anthropic-key        # References a credential in your vault
+    models:
+      sonnet: claude-sonnet-4-20250514
+      opus: claude-opus-4-20250514
+      haiku: claude-haiku-4-5-20251001
+
+  local:
+    provider: openai_compatible
+    credential: null
+    base_url: http://localhost:11434/v1
+    models:
+      llama: llama-3.3-70b
+```
+
+Profiles reference models using `provider/alias` format:
 
 ```yaml
 profiles:
   claude-code:
+    model: anthropic/sonnet         # Default model
+    model_roles:                    # Optional per-role overrides
+      sonnet_tier: anthropic/sonnet
+      opus_tier: anthropic/opus
+      haiku_tier: anthropic/haiku
+
+  aider:
+    model: anthropic/sonnet
+    model_roles:
+      editor: anthropic/haiku      # Faster model for edits
+      weak: local/llama             # Cheap model for summaries
+```
+
+Each agent's generator translates the model config into that agent's native format (env vars, JSON config, YAML, etc.). Agents that don't support programmatic model config (e.g., Cursor, Windsurf) will show an info message.
+
+Supported provider types: `anthropic`, `openai`, `openai_compatible`, `google`, `amazon_bedrock`.
+
+### Profiles
+
+A profile represents one AI tool. It defines which MCP servers that tool can access and which LLM model it uses. When the tool connects to FAM, it only sees the tools it's allowed to use.
+
+```yaml
+profiles:
+  claude-code:
+    model: anthropic/sonnet
     allowed_servers: [github, filesystem, n8n]
     denied_servers: [jira]    # Explicitly blocked
 
@@ -280,21 +331,25 @@ Exits with code 2 when drift is detected, making it usable in CI pipelines.
 
 FAM ships with config generators for these tools out of the box:
 
-| Tool | Config Target | Generated File |
-|---|---|---|
-| Claude Code | `claude_code` | `~/.claude/settings.json` |
-| Cursor | `cursor` | `~/.cursor/mcp.json` |
-| VS Code (Copilot) | `vscode` | `.vscode/mcp.json` |
-| OpenHands | `openhands` | `~/.openhands/config.toml` |
-| OpenCode | `opencode` | `~/.config/opencode/opencode.json` |
-| Windsurf | `windsurf` | `~/.codeium/windsurf/mcp_config.json` |
-| Zed | `zed` | `~/Library/Application Support/Zed/settings.json` |
-| Cline | `cline` | `cline_mcp_settings.json` |
-| Roo Code | `roo_code` | `.roo/mcp.json` |
-| Gemini CLI | `gemini_cli` | `~/.gemini/settings.json` |
-| GitHub Copilot | `github_copilot` | `~/.copilot/mcp-config.json` |
-| Amazon Q | `amazon_q` | `~/.aws/amazonq/agents/default.json` |
-| Any MCP client | `generic` | `~/.fam/configs/<profile>.json` |
+| Tool | Config Target | Generated File | Model Config |
+|---|---|---|---|
+| Claude Code | `claude_code` | `~/.claude/settings.json` | env block (API key, model, tiers) |
+| OpenCode | `opencode` | `~/.config/opencode/opencode.json` | providers + agents (coder/task roles) |
+| OpenHands | `openhands` | `~/.openhands/config.toml` | [llm] section |
+| Aider | `aider` | `~/.aider.conf.yml` | model, editor-model, weak-model |
+| Continue.dev | `continue_dev` | `~/.continue/config.yaml` | models[] with roles |
+| Gemini CLI | `gemini_cli` | `~/.gemini/settings.json` | model.name |
+| Copilot CLI | `github_copilot` | `~/.copilot/mcp-config.json` | env var hints |
+| Cursor | `cursor` | `~/.cursor/mcp.json` | GUI-only |
+| VS Code (Copilot) | `vscode` | `.vscode/mcp.json` | Depends on extension |
+| Windsurf | `windsurf` | `~/.codeium/windsurf/mcp_config.json` | GUI-only |
+| Zed | `zed` | `~/Library/Application Support/Zed/settings.json` | GUI-only |
+| Cline | `cline` | `cline_mcp_settings.json` | Partial (provider, model ID) |
+| OpenClaw | `openclaw` | `~/.openclaw/openclaw.json` | providers + model tiers (primary/fallback/economy) |
+| NemoClaw (NVIDIA) | `nemoclaw` | `~/.nemoclaw/openclaw.json` | Env var hints (NEMOCLAW_*) |
+| Roo Code | `roo_code` | `.roo/mcp.json` | GUI-only |
+| Amazon Q | `amazon_q` | `~/.aws/amazonq/agents/default.json` | CLI command hint |
+| Any MCP client | `generic` | `~/.fam/configs/<profile>.json` | N/A |
 
 Any tool that speaks MCP can connect to FAM. If your tool isn't listed above, use the `generic` config target and point it at `http://localhost:7865/mcp`.
 
@@ -339,7 +394,8 @@ All files in `~/.fam/` are created with restricted permissions (owner-only).
 
 ## Security
 
-- Credentials are stored in your OS keychain, never in config files or logs
+- **No root/admin required** -- FAM runs entirely as your normal user. The daemon, keychain access, auto-start services, and data directory are all user-scoped. See the [installation guide](./installation.md#no-root-required) for details.
+- Credentials are stored in your **user-level OS keychain** (macOS login keychain, Linux GNOME Keyring, Windows Credential Manager), never in config files or logs
 - Session tokens are shown once at generation, then only stored as SHA-256 hashes
 - The daemon binds to `localhost` only -- no remote access
 - Per-profile scoping controls which tools see which MCP servers
