@@ -72,8 +72,8 @@ Clone the repository and build locally. This is useful if you want to contribute
 ### Clone and install
 
 ```bash
-git clone https://github.com/sweetpapatech/fam.git
-cd fam
+git clone https://github.com/Sweet-Papa-Technologies/FAM.git
+cd FAM
 npm install
 ```
 
@@ -95,30 +95,69 @@ You can create an alias for convenience:
 alias fam="npx tsx /path/to/fam/src/index.ts"
 ```
 
+### Install locally (not published to npm yet)
+
+Since FAM isn't on the npm registry yet, use one of these methods to install from your local clone:
+
+**Option A: `npm link`** (recommended for development)
+
+Creates a global symlink to your local repo. Changes you make to the source are reflected immediately after rebuilding.
+
+```bash
+npm run build
+npm link
+fam --help
+```
+
+To unlink later: `npm unlink -g @sweetpapatech/fam`
+
+**Option B: `npm install -g .`** (installs a snapshot)
+
+Installs the built package globally as if it came from npm. This copies the files, so source changes require re-running the command.
+
+```bash
+npm run build
+npm install -g .
+fam --help
+```
+
+To uninstall: `npm uninstall -g @sweetpapatech/fam`
+
+**Option C: Install script** (full setup with daemon auto-start)
+
+The install script builds, installs to a prefix directory, and sets up daemon auto-start (launchd on macOS, systemd on Linux). No sudo needed with `--prefix ~`.
+
+```bash
+./scripts/install.sh --prefix ~    # Installs to ~/bin/fam
+```
+
+On Windows:
+```powershell
+.\scripts\install.ps1              # Installs to %LOCALAPPDATA%\fam
+```
+
+**Option D: Run directly without installing**
+
+Skip the install entirely and run from source via `tsx`:
+
+```bash
+npx tsx src/index.ts --help
+npx tsx src/index.ts plan
+```
+
+You can alias this for convenience:
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+alias fam="npx tsx /path/to/fam/src/index.ts"
+```
+
 ### Build for production
 
 ```bash
 npm run build
 ```
 
-This compiles TypeScript to JavaScript in the `dist/` directory. You can then run it directly:
-
-```bash
-node dist/index.js --help
-```
-
-Or use the install script (no sudo needed with `--prefix ~`):
-
-```bash
-./scripts/install.sh --prefix ~    # Installs to ~/bin/fam
-```
-
-Or link it globally:
-
-```bash
-npm link
-fam --help
-```
+This compiles TypeScript to JavaScript in the `dist/` directory.
 
 ### Run tests
 

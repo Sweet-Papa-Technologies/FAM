@@ -416,4 +416,4 @@ fam status                # Quick health check
 fam log --since 1h        # Recent activity
 ```
 
-For bugs and feature requests: [github.com/sweetpapatech/fam/issues](https://github.com/sweetpapatech/fam/issues)
+For bugs and feature requests: [github.com/Sweet-Papa-Technologies/FAM/issues](https://github.com/Sweet-Papa-Technologies/FAM/issues)

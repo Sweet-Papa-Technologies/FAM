@@ -1,6 +1,6 @@
 class Fam < Formula
   desc "FoFo Agent Manager — One config. Every agent."
-  homepage "https://github.com/sweetpapatech/fam"
+  homepage "https://github.com/Sweet-Papa-Technologies/FAM"
   url "https://registry.npmjs.org/@sweetpapatech/fam/-/fam-1.0.0.tgz"
   # sha256 will be filled after npm publish
   license "MIT"
