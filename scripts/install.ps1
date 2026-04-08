@@ -76,6 +76,9 @@ Push-Location $ProjectRoot
 try {
     npm ci --ignore-scripts 2>&1 | Select-Object -Last 1
 
+    Write-Info "Compiling native modules..."
+    npm rebuild better-sqlite3 2>&1 | Select-Object -Last 1
+
     Write-Info "Building FAM..."
     npm run build 2>&1 | Select-Object -Last 1
 

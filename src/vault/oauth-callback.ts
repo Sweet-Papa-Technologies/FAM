@@ -11,7 +11,6 @@ import { createServer } from 'node:http'
 import { exec } from 'node:child_process'
 import { platform } from 'node:os'
 import { URL } from 'node:url'
-import type { Server } from 'node:http'
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -81,7 +80,6 @@ export async function startCallbackServer(
 ): Promise<CallbackServerResult> {
   return new Promise<CallbackServerResult>((resolve, reject) => {
     let timeoutId: ReturnType<typeof setTimeout> | undefined
-    let server: Server | undefined
 
     const cleanup = (): void => {
       if (timeoutId) {
@@ -90,7 +88,7 @@ export async function startCallbackServer(
       }
     }
 
-    server = createServer((req, res) => {
+    const server = createServer((req, res) => {
       // Only handle GET requests to the callback path
       if (!req.url || req.method !== 'GET') {
         res.writeHead(404)

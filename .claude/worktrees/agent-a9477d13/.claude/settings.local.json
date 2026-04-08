@@ -4,7 +4,8 @@
       "Bash(npm test:*)",
       "Bash(grep -E \"\\\\.ts$\")",
       "Bash(ls -la /Users/fterry/code/FAM/src/generators/*.ts)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(xargs -I {} basename {} .ts)"
     ]
   }
 }

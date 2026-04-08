@@ -19,7 +19,7 @@ import { accessSync, constants } from 'node:fs'
 import chalk from 'chalk'
 
 import { parseConfig, expandTilde } from '../config/index.js'
-import type { FamConfig, ProfileConfig } from '../config/index.js'
+import type { FamConfig } from '../config/index.js'
 import { KeychainVault } from '../vault/index.js'
 import { FamError } from '../utils/errors.js'
 import { validateOutputPath } from '../utils/paths.js'

@@ -12,7 +12,7 @@ import { select } from '@inquirer/prompts'
 
 import { parseConfig, loadState, writeState, expandTilde } from '../config/index.js'
 import type { State } from '../config/types.js'
-import { applyMergeStrategy, detectExistingConfig } from '../generators/index.js'
+import { detectExistingConfig } from '../generators/index.js'
 import { FamError } from '../utils/errors.js'
 
 export function registerConfigCommand(program: Command): void {

@@ -16,7 +16,6 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml'
 import chalk from 'chalk'
 
-import { expandTilde } from '../config/index.js'
 import { FamError, ConfigError } from '../utils/errors.js'
 
 // ---- Types ------------------------------------------------------------------

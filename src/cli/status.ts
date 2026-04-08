@@ -13,7 +13,7 @@ import { Command } from 'commander'
 import { resolve } from 'node:path'
 import chalk from 'chalk'
 
-import { parseConfig, expandTilde } from '../config/index.js'
+import { parseConfig } from '../config/index.js'
 import type { FamConfig } from '../config/index.js'
 import { getDaemonStatus } from '../daemon/index.js'
 import { KeychainVault } from '../vault/index.js'

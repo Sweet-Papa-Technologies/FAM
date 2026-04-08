@@ -24,14 +24,16 @@
     "access": "public"
   },
   "scripts": {
+    "preinstall": "node -e \"var v=process.versions.node.split('.')[0]; if(v<22){console.error('\\n  FAM requires Node.js >= 22 (you have '+process.version+').\\n  Run: nvm use 22\\n'); process.exit(1)}\"",
     "build": "tsup src/index.ts --format esm --dts",
     "dev": "tsx src/index.ts",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/check-native-modules.mjs && vitest run",
     "format": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",
     "postinstall": "node scripts/postinstall.mjs",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run build && npm test",
+    "test:docker": "bash test/docker-e2e/run.sh"
   },
   "engines": {
     "node": ">=22"

@@ -1,0 +1,13 @@
+services:
+  e2e-runner:
+    build:
+      context: ../..
+      dockerfile: test/docker-e2e/Dockerfile
+    environment:
+      - E2E_CONFIG=test/docker-e2e/e2e-config.yaml
+      - E2E_LLM_URL
+      - NO_COLOR=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    tmpfs:
+      - /tmp:exec

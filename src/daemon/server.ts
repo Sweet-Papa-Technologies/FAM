@@ -262,9 +262,8 @@ export async function createDaemon(
 
       // We can't re-discover tools without reconnecting, but we can rebuild
       // profile views from the new config. For tools, copy from current proxy.
-      const currentTools = proxy.handleToolsList('')  // empty profile = get all for rebuild
-      // Actually, re-use the existing registry's tools and just rebuild profile views
-      for (const [ns, info] of Object.entries({ ...stdioStatus, ...httpStatus })) {
+      // Re-use the existing registry's tools and rebuild profile views
+      for (const [ns] of Object.entries({ ...stdioStatus, ...httpStatus })) {
         // Re-register existing upstream tools by querying current registry
         const tools = deps.proxy.getToolsForNamespace(ns)
         if (tools.length > 0) {

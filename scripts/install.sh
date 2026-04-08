@@ -103,6 +103,9 @@ info "Installing dependencies..."
 cd "$PROJECT_ROOT"
 npm ci --ignore-scripts 2>&1 | tail -1
 
+info "Compiling native modules..."
+npm rebuild better-sqlite3 2>&1 | tail -1
+
 info "Building FAM..."
 npm run build 2>&1 | tail -1
 

@@ -10,7 +10,7 @@ import type { ToolEntry, ToolDefinition } from './types.js'
 import logger from '../utils/logger.js'
 
 export class ToolRegistry {
-  private static TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-\.]+$/
+  private static TOOL_NAME_PATTERN = /^[a-zA-Z0-9_\-.]+$/
   private tools: Map<string, ToolEntry> = new Map()
   private profileViews: Map<string, ToolEntry[]> = new Map()
 

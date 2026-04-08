@@ -5,7 +5,7 @@
  * status checks. Based on DESIGN.md Section 11.
  */
 
-import { readFileSync, writeFileSync, unlinkSync, existsSync, openSync, closeSync, writeSync, chmodSync } from 'node:fs'
+import { readFileSync, unlinkSync, existsSync, openSync, closeSync, writeSync, chmodSync } from 'node:fs'
 import { constants as fsConstants } from 'node:fs'
 import { fork } from 'node:child_process'
 import type { FastifyInstance } from 'fastify'

@@ -20,7 +20,6 @@
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
-import type { ResolvedModel } from '../config/types.js'
 import { buildFamMcpEntry } from './base.js'
 import { expandTilde } from '../utils/paths.js'
 
@@ -50,15 +49,6 @@ function openclawApiType(provider: string): string {
     amazon_bedrock: 'openai-completions',
   }
   return map[provider] ?? 'openai-completions'
-}
-
-function buildTierEntry(m: ResolvedModel, maxTokens: number, temperature: number) {
-  return {
-    provider: `${openclawProvider(m.provider)}/${m.model_id}`,
-    model: m.model_id,
-    max_tokens: maxTokens,
-    temperature,
-  }
 }
 
 export function generateOpenClawConfig(input: GeneratorInput): GeneratorOutput {

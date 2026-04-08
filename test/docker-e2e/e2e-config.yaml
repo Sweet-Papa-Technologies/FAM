@@ -1,0 +1,252 @@
+# ---------------------------------------------------------------------------
+# FAM Docker E2E Test Configuration
+#
+# Defines all 17 supported agents with their expected output structure,
+# runtime timeouts, LLM defaults, and test category list.
+# ---------------------------------------------------------------------------
+
+agents:
+  claude_code:
+    display_name: "Claude Code"
+    config_target: claude_code
+    output_path: "~/.claude/settings.json"
+    output_format: json
+    installable: true
+    install_command: "npm i -g @anthropic-ai/claude-code"
+    gui_only: false
+    model_support: true
+    model_roles:
+      - sonnet_tier
+      - opus_tier
+      - haiku_tier
+    expected_structure:
+      - "mcpServers.fam.url"
+      - "mcpServers.fam.headers.Authorization"
+    verify_command: "claude --version"
+
+  cursor:
+    display_name: "Cursor"
+    config_target: cursor
+    output_path: "~/.cursor/mcp.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  vscode:
+    display_name: "VS Code"
+    config_target: vscode
+    output_path: ".vscode/mcp.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "servers.fam.url"
+
+  openhands:
+    display_name: "OpenHands"
+    config_target: openhands
+    output_path: "~/.openhands/config.toml"
+    output_format: toml
+    installable: true
+    install_command: "pip install --user openhands-ai"
+    gui_only: false
+    model_support: true
+    model_roles: []
+    expected_structure:
+      - "[mcp]"
+    verify_command: "openhands --version"
+
+  opencode:
+    display_name: "OpenCode"
+    config_target: opencode
+    output_path: "~/.config/opencode/opencode.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: true
+    model_roles:
+      - coder
+      - task
+    expected_structure:
+      - "mcp.fam.url"
+
+  windsurf:
+    display_name: "Windsurf"
+    config_target: windsurf
+    output_path: "~/.codeium/windsurf/mcp_config.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  zed:
+    display_name: "Zed"
+    config_target: zed
+    output_path: "~/.config/zed/settings.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "context_servers.fam.url"
+
+  cline:
+    display_name: "Cline"
+    config_target: cline
+    output_path: "~/.cline/cline_mcp_settings.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: true
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  roo_code:
+    display_name: "Roo Code"
+    config_target: roo_code
+    output_path: ".roo/mcp.json"
+    output_format: json
+    installable: false
+    gui_only: true
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  gemini_cli:
+    display_name: "Gemini CLI"
+    config_target: gemini_cli
+    output_path: "~/.gemini/settings.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: true
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  github_copilot:
+    display_name: "GitHub Copilot"
+    config_target: github_copilot
+    output_path: "~/.copilot/mcp-config.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  amazon_q:
+    display_name: "Amazon Q"
+    config_target: amazon_q
+    output_path: "~/.aws/amazonq/agents/default.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  aider:
+    display_name: "Aider"
+    config_target: aider
+    output_path: "~/.aider.conf.yml"
+    output_format: yaml
+    installable: true
+    install_command: "pip install --user aider-chat"
+    gui_only: false
+    model_support: true
+    model_roles:
+      - editor
+      - weak
+    expected_structure:
+      - "model"
+    verify_command: "which aider"
+
+  continue_dev:
+    display_name: "Continue.dev"
+    config_target: continue_dev
+    output_path: "~/.continue/config.yaml"
+    output_format: yaml
+    installable: false
+    gui_only: false
+    model_support: true
+    model_roles:
+      - chat
+      - edit
+      - apply
+      - autocomplete
+      - embed
+    expected_structure:
+      - "mcpServers"
+
+  openclaw:
+    display_name: "OpenClaw"
+    config_target: openclaw
+    output_path: "~/.openclaw/openclaw.json"
+    output_format: json
+    installable: true
+    install_command: "npm i -g openclaw"
+    gui_only: false
+    model_support: true
+    model_roles:
+      - fallback
+      - economy
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  nemoclaw:
+    display_name: "NemoClaw"
+    config_target: nemoclaw
+    output_path: "~/.nemoclaw/openclaw.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcpServers.fam.url"
+
+  generic:
+    display_name: "Generic"
+    config_target: generic
+    output_path: "~/.fam/configs/<profile>.json"
+    output_format: json
+    installable: false
+    gui_only: false
+    model_support: false
+    model_roles: []
+    expected_structure:
+      - "mcp_endpoint"
+      - "token"
+
+runtime:
+  timeout_per_test_ms: 30000
+  timeout_per_category_ms: 300000
+
+llm:
+  base_url: "http://host.docker.internal:11434/v1"
+  provider: "openai_compatible"
+  model_id: "gemma4"
+  api_key: "ollama"
+
+categories:
+  - core-cli
+  - daemon
+  - generators
+  - vault
+  - agent-integration
+  - model-config
