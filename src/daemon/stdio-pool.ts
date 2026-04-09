@@ -10,6 +10,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import type { StdioServerConfig } from '../config/types.js'
 import type { ToolDefinition, McpResult } from './types.js'
+import { FAM_VERSION } from '../utils/version.js'
 import logger from '../utils/logger.js'
 
 interface StdioProcessEntry {
@@ -88,7 +89,7 @@ export class StdioPool {
     })
 
     const client = new Client(
-      { name: `fam-stdio-${namespace}`, version: '1.0.0' },
+      { name: `fam-stdio-${namespace}`, version: FAM_VERSION },
       { capabilities: {} },
     )
 

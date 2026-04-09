@@ -99,8 +99,9 @@ Write-Info "Installing to $LibDir ..."
 New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
 New-Item -ItemType Directory -Path $LibDir -Force | Out-Null
 
-# Copy dist and package files
+# Copy dist, package files, and scripts (needed by npm lifecycle hooks)
 Copy-Item -Path (Join-Path $ProjectRoot "dist") -Destination $LibDir -Recurse -Force
+Copy-Item -Path (Join-Path $ProjectRoot "scripts") -Destination $LibDir -Recurse -Force
 Copy-Item -Path (Join-Path $ProjectRoot "package.json") -Destination $LibDir -Force
 $lockFile = Join-Path $ProjectRoot "package-lock.json"
 if (Test-Path $lockFile) {
@@ -110,7 +111,7 @@ if (Test-Path $lockFile) {
 # Install production dependencies only
 Push-Location $LibDir
 try {
-    npm ci --omit=dev 2>&1 | Select-Object -Last 1
+    npm ci --omit=dev 2>&1
 } finally {
     Pop-Location
 }

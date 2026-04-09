@@ -26,6 +26,7 @@ import { tmpdir } from 'node:os'
 import { execSync, spawn, type ChildProcess } from 'node:child_process'
 import { randomBytes, createHash } from 'node:crypto'
 import Database from 'better-sqlite3'
+import { FAM_VERSION } from '../../src/utils/version.js'
 
 // ─── Test Configuration ─────────────────────────────────────────
 
@@ -285,7 +286,7 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
   it('6. /health returns minimal info without auth', async () => {
     const health = await healthCheck()
     expect(health.status).toBe('ok')
-    expect(health.version).toBe('1.0.0')
+    expect(health.version).toBe(FAM_VERSION)
     // Should NOT contain server details when unauthenticated
     expect(health).not.toHaveProperty('servers')
     expect(health).not.toHaveProperty('profiles')
@@ -369,7 +370,7 @@ describe('FAM E2E: Full Lifecycle', { timeout: 120_000 }, () => {
     const text = result.content[0].text
     const health = JSON.parse(text)
     expect(health.daemon.status).toBe('healthy')
-    expect(health.daemon.version).toBe('1.0.0')
+    expect(health.daemon.version).toBe(FAM_VERSION)
   })
 
   it('13. fam__list_servers shows filesystem for test-profile', async () => {

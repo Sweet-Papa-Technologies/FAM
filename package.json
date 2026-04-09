@@ -1,6 +1,6 @@
 {
   "name": "@sweetpapatech/fam",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FoFo Agent Manager — One config. Every agent.",
   "type": "module",
   "bin": {
@@ -26,6 +26,7 @@
   "scripts": {
     "preinstall": "node -e \"var v=process.versions.node.split('.')[0]; if(v<22){console.error('\\n  FAM requires Node.js >= 22 (you have '+process.version+').\\n  Run: nvm use 22\\n'); process.exit(1)}\"",
     "build": "tsup src/index.ts --format esm --dts",
+    "build:patch": "npm version patch --no-git-tag-version && tsup src/index.ts --format esm --dts",
     "dev": "tsx src/index.ts",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "typecheck": "tsc --noEmit",

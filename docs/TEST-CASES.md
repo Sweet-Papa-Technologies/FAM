@@ -249,7 +249,7 @@ This document describes all the test scenarios for validating FAM end-to-end. It
 | 5.1.3 | `fam__log_action` rejects missing action | isError: true | Yes |
 | 5.1.4 | `fam__log_action` accepts metadata | Metadata in audit entry | Yes |
 | 5.1.5 | `fam__list_servers` shows server status | Server list with tool counts | Yes (E2E + Docker) |
-| 5.1.6 | `fam__health` returns daemon uptime + version | 1.0.0, uptime > 0 | Yes (E2E + Docker) |
+| 5.1.6 | `fam__health` returns daemon uptime + version | Version from package.json, uptime > 0 | Yes (E2E + Docker) |
 
 ### 5.2 Knowledge Tools
 

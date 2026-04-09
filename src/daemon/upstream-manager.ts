@@ -12,6 +12,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import type { HttpServerConfig, FamConfig } from '../config/types.js'
 import type { CredentialVault } from '../vault/types.js'
 import type { ToolDefinition, McpResult } from './types.js'
+import { FAM_VERSION } from '../utils/version.js'
 import logger from '../utils/logger.js'
 
 interface UpstreamEntry {
@@ -107,7 +108,7 @@ export class UpstreamManager {
     })
 
     const client = new Client(
-      { name: `fam-http-${namespace}`, version: '1.0.0' },
+      { name: `fam-http-${namespace}`, version: FAM_VERSION },
       { capabilities: {} },
     )
 

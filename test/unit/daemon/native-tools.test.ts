@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
+import { FAM_VERSION } from '../../../src/utils/version.js'
 import {
   handleNativeTool,
   getNativeToolDefinitions,
@@ -217,7 +218,7 @@ describe('Native Tools', () => {
 
       expect(data.daemon).toBeDefined()
       expect(data.daemon.status).toBe('healthy')
-      expect(data.daemon.version).toBe('1.0.0')
+      expect(data.daemon.version).toBe(FAM_VERSION)
       expect(data.daemon.uptime_seconds).toBeGreaterThan(0)
     })
 

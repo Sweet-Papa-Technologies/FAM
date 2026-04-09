@@ -9,12 +9,13 @@ import { Command } from 'commander'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expandTilde } from '../config/index.js'
+import { FAM_VERSION } from '../utils/version.js'
 
 const program = new Command()
 program
   .name('fam')
   .description('FoFo Agent Manager -- One config. Every agent.')
-  .version('1.0.0')
+  .version(FAM_VERSION)
 
 // Global options
 program

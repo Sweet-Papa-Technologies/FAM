@@ -13,6 +13,7 @@ import type {
   McpResult,
   CallContext,
 } from './types.js'
+import { FAM_VERSION } from '../utils/version.js'
 import type { ToolRegistry } from './tool-registry.js'
 import type { IAuditLogger } from '../audit/types.js'
 import type { KnowledgeStore } from '../knowledge/index.js'
@@ -327,7 +328,7 @@ function handleHealth(deps: NativeToolDeps): McpResult {
     daemon: {
       status: 'healthy',
       uptime_seconds: uptimeSeconds,
-      version: '1.0.0',
+      version: FAM_VERSION,
     },
     servers: Object.fromEntries(
       Object.entries(serverStatuses).map(([ns, info]) => [

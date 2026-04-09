@@ -97,17 +97,31 @@ if ! command -v npm &>/dev/null; then
 fi
 dim "npm $(npm -v)"
 
+# Check write permissions early — fail fast before spending time on build
+if [[ ! -w "$BIN_DIR" ]] && [[ ! -w "$(dirname "$BIN_DIR")" ]]; then
+  if [[ "$EUID" -ne 0 ]]; then
+    echo ""
+    warn "Cannot write to $BIN_DIR (permission denied)."
+    warn "Either run with sudo or use a user-local prefix:"
+    echo ""
+    echo "    sudo ./scripts/install.sh                # system-wide"
+    echo "    ./scripts/install.sh --prefix ~           # user-local (no sudo)"
+    echo ""
+    fail "Permission denied: $BIN_DIR"
+  fi
+fi
+
 # ─── Build ───────────────────────────────────────────────────────
 
 info "Installing dependencies..."
 cd "$PROJECT_ROOT"
-npm ci --ignore-scripts 2>&1 | tail -1
+npm ci --ignore-scripts 2>&1 | tail -3
 
 info "Compiling native modules..."
-npm rebuild better-sqlite3 2>&1 | tail -1
+npm rebuild better-sqlite3 2>&1 | tail -3
 
 info "Building FAM..."
-npm run build 2>&1 | tail -1
+npm run build 2>&1 | tail -3
 
 if [[ ! -f "$PROJECT_ROOT/dist/index.js" ]]; then
   fail "Build failed: dist/index.js not found"
@@ -121,8 +135,9 @@ info "Installing to $LIB_DIR ..."
 # Create directories
 mkdir -p "$BIN_DIR" "$LIB_DIR"
 
-# Copy dist and package files
+# Copy dist, package files, and scripts (needed by npm lifecycle hooks)
 cp -r "$PROJECT_ROOT/dist" "$LIB_DIR/"
+cp -r "$PROJECT_ROOT/scripts" "$LIB_DIR/"
 cp "$PROJECT_ROOT/package.json" "$LIB_DIR/"
 cp "$PROJECT_ROOT/package-lock.json" "$LIB_DIR/" 2>/dev/null || true
 
@@ -130,7 +145,7 @@ cp "$PROJECT_ROOT/package-lock.json" "$LIB_DIR/" 2>/dev/null || true
 # Pin the exact Node binary path so the native module matches the runtime.
 NODE_BIN="$(which node)"
 cd "$LIB_DIR"
-npm ci --omit=dev 2>&1 | tail -1
+npm ci --omit=dev 2>&1
 cd "$PROJECT_ROOT"
 
 # Make the entry point executable
@@ -139,7 +154,7 @@ chmod +x "$LIB_DIR/dist/index.js"
 # Create wrapper script (more robust than symlink for ESM + shebang)
 if [[ -L "$BIN_DIR/fam" || -f "$BIN_DIR/fam" ]]; then
   warn "Replacing existing $BIN_DIR/fam"
-  rm -f "$BIN_DIR/fam"
+  rm -f "$BIN_DIR/fam" 2>/dev/null || true
 fi
 
 # Pin the absolute path to the Node binary used during install.
@@ -147,10 +162,20 @@ fi
 NODE_BIN="$(which node)"
 dim "Using Node: $NODE_BIN ($(node -v))"
 
-cat > "$BIN_DIR/fam" << WRAPPER
+if ! cat > "$BIN_DIR/fam" 2>/dev/null << WRAPPER
 #!/usr/bin/env bash
 exec "$NODE_BIN" "$LIB_DIR/dist/index.js" "\$@"
 WRAPPER
+then
+  echo ""
+  warn "Cannot write to $BIN_DIR (permission denied)."
+  warn "Either run with sudo or use a user-local prefix:"
+  echo ""
+  echo "    sudo ./scripts/install.sh                # system-wide"
+  echo "    ./scripts/install.sh --prefix ~           # user-local (no sudo)"
+  echo ""
+  fail "Permission denied: $BIN_DIR/fam"
+fi
 chmod +x "$BIN_DIR/fam"
 dim "Wrapper: $BIN_DIR/fam -> $NODE_BIN $LIB_DIR/dist/index.js"
 

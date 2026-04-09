@@ -11,6 +11,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import type { FamConfig } from '../config/types.js'
 import type { DaemonDeps } from './types.js'
 import type { McpProxy } from './proxy.js'
+import { FAM_VERSION } from '../utils/version.js'
 import { AuthEngine } from './auth.js'
 import type { StdioPool } from './stdio-pool.js'
 import type { UpstreamManager } from './upstream-manager.js'
@@ -174,7 +175,7 @@ export async function createDaemon(
             },
             serverInfo: {
               name: 'fam',
-              version: '1.0.0',
+              version: FAM_VERSION,
             },
           },
         })
@@ -205,7 +206,7 @@ export async function createDaemon(
       // Unauthenticated: minimal response
       return reply.status(200).send({
         status: 'ok',
-        version: '1.0.0',
+        version: FAM_VERSION,
       })
     }
 
@@ -221,7 +222,7 @@ export async function createDaemon(
     return reply.status(allHealthy ? 200 : 503).send({
       status: allHealthy ? 'healthy' : 'degraded',
       uptime_ms: uptimeMs,
-      version: '1.0.0',
+      version: FAM_VERSION,
       servers: allServers,
       profiles: auth.getProfiles(),
       tool_count: proxy.handleToolsList(auth.getProfiles()[0] ?? '').length,
