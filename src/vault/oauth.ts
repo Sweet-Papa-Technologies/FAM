@@ -15,7 +15,7 @@ import { AuthorizationCode } from 'simple-oauth2'
 import { randomBytes } from 'node:crypto'
 import type { CredentialVault } from './types.js'
 import type { FamConfig, OAuthCredConfig } from '../config/types.js'
-import { getProviderConfig } from './oauth-providers.js'
+import { getProviderConfig, listProviders } from './oauth-providers.js'
 import type { OAuthProviderConfig } from './oauth-providers.js'
 import { startCallbackServer } from './oauth-callback.js'
 import { VaultError } from '../utils/errors.js'
@@ -55,13 +55,34 @@ export class OAuthManager {
     // 1. Get credential config
     const credConfig = this.getCredConfig(credName)
 
-    // 2. Get provider endpoints
-    const providerConfig = getProviderConfig(credConfig.provider)
+    // 2. Get provider endpoints (registry lookup or custom URLs)
+    let providerConfig = getProviderConfig(credConfig.provider)
+
+    if (!providerConfig && credConfig.provider === 'custom') {
+      // Custom provider: user supplies URLs directly in fam.yaml
+      if (!credConfig.authorize_url || !credConfig.token_url) {
+        throw new VaultError(
+          'OAUTH_MISSING_URLS',
+          `Custom OAuth provider for '${credName}' requires both authorize_url and token_url in fam.yaml.`,
+        )
+      }
+      const authorizeUrlObj = new URL(credConfig.authorize_url)
+      const tokenUrlObj = new URL(credConfig.token_url)
+      providerConfig = {
+        authorizeHost: `${authorizeUrlObj.protocol}//${authorizeUrlObj.host}`,
+        authorizePath: authorizeUrlObj.pathname,
+        tokenHost: `${tokenUrlObj.protocol}//${tokenUrlObj.host}`,
+        tokenPath: tokenUrlObj.pathname,
+      }
+    }
+
     if (!providerConfig) {
+      const providers = listProviders()
       throw new VaultError(
         'OAUTH_UNKNOWN_PROVIDER',
         `Unknown OAuth provider '${credConfig.provider}' for credential '${credName}'. ` +
-          `Supported providers: github, google, atlassian, microsoft, gitlab, slack`,
+          `Supported providers: ${providers.join(', ')}. ` +
+          `Or use provider: "custom" with authorize_url and token_url.`,
       )
     }
 

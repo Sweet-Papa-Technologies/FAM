@@ -23,6 +23,8 @@ export const OAuth2CredentialSchema = z.object({
   provider: z.string(),
   client_id: z.string(),
   scopes: z.array(z.string()),
+  authorize_url: z.string().url().optional(),  // Required when provider is "custom"
+  token_url: z.string().url().optional(),       // Required when provider is "custom"
 })
 
 export const CredentialSchema = z.discriminatedUnion('type', [

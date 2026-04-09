@@ -22,6 +22,8 @@ export interface OAuthCredConfig {
   provider: string
   client_id: string
   scopes: string[]
+  authorize_url?: string   // Required when provider is "custom"
+  token_url?: string       // Required when provider is "custom"
 }
 
 export type CredentialConfig = ApiKeyCredConfig | OAuthCredConfig

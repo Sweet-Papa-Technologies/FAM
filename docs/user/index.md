@@ -179,20 +179,84 @@ profiles:
 
 ### Credentials
 
-Secrets live in your OS keychain (macOS Keychain, Windows Credential Manager, Linux libsecret). They're declared in `fam.yaml` but the actual values are never written to any file.
+Secrets live in your OS keychain (macOS Keychain, Windows Credential Manager, Linux libsecret). They're declared in `fam.yaml` but the actual values are never written to any file. FAM never exposes full credential values — `fam secret get` only shows a masked preview.
+
+#### API Keys
+
+For simple tokens (GitHub PAT, Anthropic API key, etc.):
+
+```yaml
+# 1. Declare in fam.yaml
+credentials:
+  github-pat:
+    type: api_key
+    description: "GitHub Personal Access Token"
+    rotate_after_days: 90    # optional — FAM will remind you
+```
 
 ```bash
-# Store a credential
+# 2. Store the actual value
 fam secret set github-pat
 # Enter value: ****
 
-# Check what's stored
+# 3. Check status
 fam secret list
 # github-pat    api_key    stored    (rotation in 75 days)
-# jira-oauth    oauth2     missing   -> run: fam secret set jira-oauth
 ```
 
-For OAuth2 credentials, use `fam auth login <name>` to start the browser-based authorization flow. FAM stores the tokens in your keychain and handles refresh automatically when they expire. Supported providers: GitHub, Google, Atlassian, Microsoft, GitLab, Slack.
+#### OAuth2
+
+FAM supports 14 built-in OAuth2 providers plus any custom OAuth2 endpoint. You need a registered OAuth app with a client ID.
+
+Built-in providers: `github`, `gitlab`, `bitbucket`, `google`, `microsoft`, `atlassian`, `notion`, `linear`, `slack`, `discord`, `figma`, `okta`, `auth0`, `aws_cognito`. Run `fam auth providers` for the full list.
+
+```yaml
+# 1. Declare in fam.yaml
+credentials:
+  github-oauth:
+    type: oauth2
+    description: "GitHub OAuth2"
+    provider: github              # must be one of the 6 supported providers
+    client_id: "your-client-id"   # from your OAuth app registration
+    scopes:
+      - repo
+      - read:user
+```
+
+```bash
+# 2. Store your client secret
+fam secret set github-oauth:client_secret
+
+# 3. Start the browser-based login flow
+fam auth login github-oauth
+# Opens browser → authorize → FAM captures the tokens
+
+# 4. Check token status
+fam auth status github-oauth
+# Access token: valid (expires in 3598s)
+# Refresh token: stored
+
+# 5. Force refresh if needed
+fam auth refresh github-oauth
+```
+
+For any OAuth2 provider not in the built-in list, use `provider: custom` with explicit URLs:
+
+```yaml
+credentials:
+  my-sso:
+    type: oauth2
+    description: "Internal SSO"
+    provider: custom
+    client_id: "my-app-id"
+    authorize_url: "https://sso.company.com/oauth/authorize"
+    token_url: "https://sso.company.com/oauth/token"
+    scopes: ["openid", "profile"]
+```
+
+**Important:** The credential name in `fam auth login <name>` must match the name declared in `fam.yaml` under `credentials`. Run `fam auth providers` to see all supported providers.
+
+FAM stores OAuth tokens in your keychain and handles refresh automatically when they expire during MCP tool calls.
 
 ### The Daemon
 
@@ -242,12 +306,14 @@ FAM runs a local proxy daemon on `localhost:7865`. Your tools connect to it as a
 
 ### OAuth2 Commands
 
+Credential must be declared in `fam.yaml` with `type: oauth2` before these commands work. See [Credentials > OAuth2](#oauth2) above.
+
 | Command | Description |
 |---|---|
-| `fam auth login <credential>` | Start OAuth2 authorization flow (opens browser) |
+| `fam auth providers` | List all 14 built-in OAuth2 providers + custom option |
+| `fam auth login <credential>` | Start OAuth2 flow for a credential declared in fam.yaml (opens browser) |
 | `fam auth status [credential]` | Show OAuth2 token status and expiry |
 | `fam auth refresh <credential>` | Force-refresh an access token |
-| `fam auth providers` | List supported OAuth2 providers |
 
 ### Token & Server Commands
 

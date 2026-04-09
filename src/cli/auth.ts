@@ -202,9 +202,14 @@ export function registerAuthCommand(program: Command): void {
       }
 
       console.log()
+      console.log(`  ${chalk.yellow('custom')}  ${chalk.dim('— any OAuth2 provider (supply authorize_url + token_url)')}`)
+      console.log()
+      console.log(chalk.dim('Note: okta, auth0, and aws_cognito require your domain in the URLs.'))
+      console.log(chalk.dim('Use provider: "custom" with explicit URLs if the template doesn\'t match.'))
+      console.log()
       console.log(
         chalk.dim(
-          'Configure a provider in fam.yaml under credentials with type: oauth2',
+          'Configure in fam.yaml under credentials with type: oauth2',
         ),
       )
     })
