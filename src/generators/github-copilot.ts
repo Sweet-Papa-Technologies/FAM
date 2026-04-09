@@ -1,8 +1,8 @@
 /**
  * generators/github-copilot.ts — GitHub Copilot CLI config generator.
  *
- * Produces ~/.copilot/mcp-config.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces ~/.copilot/mcp-config.json with an mcpServers entry.
+ * Copilot CLI uses "type" (not "transport") with values "http", "sse", or "stdio".
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -16,8 +16,8 @@ export function generateGithubCopilotConfig(input: GeneratorInput): GeneratorOut
   const config = {
     mcpServers: {
       fam: {
+        type: 'sse',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },

@@ -43,10 +43,10 @@ describe('generateGithubCopilotConfig', () => {
     )
   })
 
-  it('should set transport to sse', () => {
+  it('should set type to sse', () => {
     const result = generateGithubCopilotConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.type).toBe('sse')
   })
 
   it('should expand tilde in the output path', () => {

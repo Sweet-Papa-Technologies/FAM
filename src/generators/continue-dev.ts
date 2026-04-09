@@ -4,6 +4,10 @@
  * Produces ~/.continue/config.yaml with model definitions and
  * MCP server entries.
  *
+ * Continue.dev config.yaml requires top-level name/version/schema fields.
+ * Model entries require both "name" (display) and "model" (ID) fields.
+ * MCP server headers go under "requestOptions.headers" (not top-level).
+ *
  * Supported roles:
  *   - chat         → model with roles: [chat]
  *   - edit         → model with roles: [edit]
@@ -42,7 +46,11 @@ function modelKey(m: ResolvedModel): string {
 
 export function generateContinueDevConfig(input: GeneratorInput): GeneratorOutput {
   const warnings: string[] = []
-  const config: Record<string, unknown> = {}
+  const config: Record<string, unknown> = {
+    name: 'FAM Managed Config',
+    version: '1.0.0',
+    schema: 'v1',
+  }
 
   if (input.models?.default) {
     // Build a map of unique models → their roles
@@ -93,6 +101,7 @@ export function generateContinueDevConfig(input: GeneratorInput): GeneratorOutpu
     for (const { model, roles } of modelRoleMap.values()) {
       if (roles.length === 0) continue
       models.push({
+        name: model.model_id,
         model: model.model_id,
         provider: continueProvider(model.provider),
         ...(model.api_key ? { apiKey: model.api_key } : {}),
@@ -104,13 +113,16 @@ export function generateContinueDevConfig(input: GeneratorInput): GeneratorOutpu
     config['models'] = models
   }
 
-  // MCP servers section
+  // MCP servers section — headers go under requestOptions
   const mcpUrl = input.daemonUrl.replace(/\/$/, '') + '/mcp'
   config['mcpServers'] = [
     {
       name: 'fam',
+      type: 'sse',
       url: mcpUrl,
-      headers: { Authorization: `Bearer ${input.sessionToken}` },
+      requestOptions: {
+        headers: { Authorization: `Bearer ${input.sessionToken}` },
+      },
     },
   ]
 

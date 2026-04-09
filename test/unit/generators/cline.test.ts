@@ -7,7 +7,7 @@ function makeInput(overrides?: Partial<GeneratorInput>): GeneratorInput {
     profile: {
       name: 'cline',
       description: 'Cline agent',
-      config_target: '~/.vscode/extensions/cline/cline_mcp_settings.json',
+      config_target: '~/.cline/data/settings/cline_mcp_settings.json',
       allowed_servers: ['github'],
       denied_servers: [],
     },
@@ -46,13 +46,13 @@ describe('generateClineConfig', () => {
   it('should set transport to sse', () => {
     const result = generateClineConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.type).toBe('sse')
   })
 
   it('should expand tilde in the output path', () => {
     const result = generateClineConfig(makeInput())
     expect(result.path).not.toContain('~')
-    expect(result.path).toContain('.vscode/extensions/cline/cline_mcp_settings.json')
+    expect(result.path).toContain('.cline/data/settings/cline_mcp_settings.json')
   })
 
   it('should report format as json', () => {

@@ -58,8 +58,8 @@ export function generateOpenClawConfig(input: GeneratorInput): GeneratorOutput {
   const config: Record<string, unknown> = {
     mcpServers: {
       fam: {
+        transport: 'http',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },
@@ -125,31 +125,34 @@ export function generateOpenClawModelsYaml(input: GeneratorInput): GeneratorOutp
 
   const lines: string[] = ['# OpenClaw model tiers — managed by FAM']
 
+  // Tiers wrapper — OpenClaw expects all tiers nested under a "tiers:" key
+  lines.push('tiers:')
+
   // Primary tier (default model)
-  lines.push('primary:')
-  lines.push(`  provider: ${openclawProvider(m.provider)}/${m.model_id}`)
-  lines.push(`  model: ${m.model_id}`)
-  lines.push('  max_tokens: 8192')
-  lines.push('  temperature: 0.3')
+  lines.push('  primary:')
+  lines.push(`    provider: ${openclawProvider(m.provider)}`)
+  lines.push(`    model: ${m.model_id}`)
+  lines.push('    max_tokens: 8192')
+  lines.push('    temperature: 0.3')
 
   // Fallback tier
   if (roles.fallback) {
     const fb = roles.fallback
-    lines.push('fallback:')
-    lines.push(`  provider: ${openclawProvider(fb.provider)}/${fb.model_id}`)
-    lines.push(`  model: ${fb.model_id}`)
-    lines.push('  max_tokens: 4096')
-    lines.push('  temperature: 0.3')
+    lines.push('  fallback:')
+    lines.push(`    provider: ${openclawProvider(fb.provider)}`)
+    lines.push(`    model: ${fb.model_id}`)
+    lines.push('    max_tokens: 4096')
+    lines.push('    temperature: 0.3')
   }
 
   // Economy tier
   if (roles.economy) {
     const ec = roles.economy
-    lines.push('economy:')
-    lines.push(`  provider: ${openclawProvider(ec.provider)}/${ec.model_id}`)
-    lines.push(`  model: ${ec.model_id}`)
-    lines.push('  max_tokens: 2048')
-    lines.push('  temperature: 0.2')
+    lines.push('  economy:')
+    lines.push(`    provider: ${openclawProvider(ec.provider)}`)
+    lines.push(`    model: ${ec.model_id}`)
+    lines.push('    max_tokens: 2048')
+    lines.push('    temperature: 0.2')
   }
 
   lines.push('') // trailing newline

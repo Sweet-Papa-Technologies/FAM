@@ -32,7 +32,7 @@ describe('generateWindsurfConfig', () => {
     const parsed = JSON.parse(result.content)
     expect(parsed.mcpServers).toBeDefined()
     expect(parsed.mcpServers.fam).toBeDefined()
-    expect(parsed.mcpServers.fam.url).toBe('http://localhost:7865/mcp')
+    expect(parsed.mcpServers.fam.serverUrl).toBe('http://localhost:7865/mcp')
   })
 
   it('should include the token in the Authorization header', () => {
@@ -46,7 +46,7 @@ describe('generateWindsurfConfig', () => {
   it('should set transport to sse', () => {
     const result = generateWindsurfConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.transport).toBeUndefined()
   })
 
   it('should expand tilde in the output path', () => {
@@ -65,6 +65,6 @@ describe('generateWindsurfConfig', () => {
       makeInput({ daemonUrl: 'http://localhost:7865/' })
     )
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.url).toBe('http://localhost:7865/mcp')
+    expect(parsed.mcpServers.fam.serverUrl).toBe('http://localhost:7865/mcp')
   })
 })

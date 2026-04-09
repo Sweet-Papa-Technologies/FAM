@@ -2,7 +2,7 @@
  * generators/vscode.ts — VS Code config generator.
  *
  * Produces .vscode/mcp.json with a "servers" entry (not "mcpServers")
- * using "type" (not "transport") — VS Code uses a slightly different schema.
+ * using "type": "http" (Streamable HTTP, the recommended transport).
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -16,7 +16,7 @@ export function generateVSCodeConfig(input: GeneratorInput): GeneratorOutput {
   const config = {
     servers: {
       fam: {
-        type: 'sse',
+        type: 'http',
         url: entry.url,
         headers: entry.headers,
       },

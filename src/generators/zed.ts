@@ -25,7 +25,6 @@ export function generateZedConfig(input: GeneratorInput): GeneratorOutput {
   const config = {
     context_servers: {
       fam: {
-        source: 'custom',
         url: entry.url,
         headers: entry.headers,
       },

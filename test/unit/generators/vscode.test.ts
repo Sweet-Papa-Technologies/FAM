@@ -37,7 +37,7 @@ describe('generateVSCodeConfig', () => {
   it('should use "type": "sse" instead of "transport"', () => {
     const result = generateVSCodeConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.servers.fam.type).toBe('sse')
+    expect(parsed.servers.fam.type).toBe('http')
     expect(parsed.servers.fam.transport).toBeUndefined()
   })
 

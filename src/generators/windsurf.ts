@@ -1,8 +1,8 @@
 /**
  * generators/windsurf.ts — Windsurf (Codeium AI IDE) config generator.
  *
- * Produces ~/.codeium/windsurf/mcp_config.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces ~/.codeium/windsurf/mcp_config.json with an mcpServers entry.
+ * Windsurf uses "serverUrl" (not "url") and has no transport field.
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -16,8 +16,7 @@ export function generateWindsurfConfig(input: GeneratorInput): GeneratorOutput {
   const config = {
     mcpServers: {
       fam: {
-        url: entry.url,
-        transport: entry.transport,
+        serverUrl: entry.url,
         headers: entry.headers,
       },
     },

@@ -42,7 +42,7 @@ describe('generateZedConfig', () => {
   it('should set source to custom', () => {
     const result = generateZedConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.context_servers.fam.source).toBe('custom')
+    expect(parsed.context_servers.fam.source).toBeUndefined()
   })
 
   it('should include the token in the Authorization header', () => {

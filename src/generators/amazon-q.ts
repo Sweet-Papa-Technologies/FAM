@@ -1,8 +1,8 @@
 /**
  * generators/amazon-q.ts — Amazon Q Developer config generator.
  *
- * Produces ~/.aws/amazonq/agents/default.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces ~/.aws/amazonq/mcp.json with an mcpServers entry.
+ * Amazon Q CLI uses "type": "http" for remote servers.
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -16,8 +16,8 @@ export function generateAmazonQConfig(input: GeneratorInput): GeneratorOutput {
   const config = {
     mcpServers: {
       fam: {
+        type: 'http',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },
@@ -29,7 +29,7 @@ export function generateAmazonQConfig(input: GeneratorInput): GeneratorOutput {
 
   const outputPath = input.profile.config_target
     ? expandTilde(input.profile.config_target)
-    : expandTilde('~/.aws/amazonq/agents/default.json')
+    : expandTilde('~/.aws/amazonq/mcp.json')
 
   return {
     path: outputPath,

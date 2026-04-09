@@ -27,9 +27,9 @@ describe('generateNemoClawConfig', () => {
     expect(() => JSON.parse(result.content)).not.toThrow()
   })
 
-  it('should output to ~/.nemoclaw/openclaw.json', () => {
+  it('should output to ~/.nemoclaw/config.json', () => {
     const result = generateNemoClawConfig(makeInput())
-    expect(result.path).toContain('.nemoclaw/openclaw.json')
+    expect(result.path).toContain('.nemoclaw/config.json')
   })
 
   it('should include mcpServers.fam with correct URL', () => {

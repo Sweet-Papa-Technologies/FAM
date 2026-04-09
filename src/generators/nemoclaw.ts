@@ -5,7 +5,7 @@
  * on NVIDIA OpenShell with sandboxing and managed inference.
  *
  * Produces:
- *   - ~/.nemoclaw/openclaw.json — mcpServers entry (same format as OpenClaw)
+ *   - ~/.nemoclaw/config.json — mcpServers entry (OpenClaw-compatible format)
  *
  * Model configuration in NemoClaw is primarily env-var driven
  * (NEMOCLAW_PROVIDER, NEMOCLAW_MODEL, NEMOCLAW_ENDPOINT_URL, etc.)
@@ -45,8 +45,8 @@ export function generateNemoClawConfig(input: GeneratorInput): GeneratorOutput {
   const config: Record<string, unknown> = {
     mcpServers: {
       fam: {
+        transport: 'http',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },
@@ -82,7 +82,7 @@ export function generateNemoClawConfig(input: GeneratorInput): GeneratorOutput {
     )
   }
 
-  const outputPath = expandTilde('~/.nemoclaw/openclaw.json')
+  const outputPath = expandTilde('~/.nemoclaw/config.json')
 
   return {
     path: outputPath,

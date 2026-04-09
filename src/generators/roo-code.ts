@@ -1,8 +1,8 @@
 /**
  * generators/roo-code.ts — Roo Code (VS Code extension) config generator.
  *
- * Produces .roo/mcp.json (project-level) with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces .roo/mcp.json (project-level) with an mcpServers entry.
+ * Roo Code uses "type" (not "transport") with values "sse" or "streamable-http".
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -16,8 +16,8 @@ export function generateRooCodeConfig(input: GeneratorInput): GeneratorOutput {
   const config = {
     mcpServers: {
       fam: {
+        type: 'sse',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },

@@ -30,15 +30,14 @@ describe('generateOpenHandsConfig', () => {
   it('should contain an [mcp] section with fam server', () => {
     const result = generateOpenHandsConfig(makeInput())
     expect(result.content).toContain('[mcp]')
-    expect(result.content).toContain('servers = [')
-    expect(result.content).toContain('name = "fam"')
+    expect(result.content).toContain('sse_servers = [')
     expect(result.content).toContain('url = "http://localhost:7865/mcp"')
-    expect(result.content).toContain('transport = "sse"')
+    expect(result.content).toContain('api_key = "fam_sk_oh_m3n4o5p6"')
   })
 
   it('should include the session token in the server entry', () => {
     const result = generateOpenHandsConfig(makeInput())
-    expect(result.content).toContain('token = "fam_sk_oh_m3n4o5p6"')
+    expect(result.content).toContain('api_key = "fam_sk_oh_m3n4o5p6"')
   })
 
   it('should NOT include [llm] section when env_inject is absent', () => {

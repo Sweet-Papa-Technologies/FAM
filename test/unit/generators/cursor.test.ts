@@ -46,7 +46,7 @@ describe('generateCursorConfig', () => {
   it('should set transport to sse', () => {
     const result = generateCursorConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.transport).toBeUndefined()
   })
 
   it('should expand tilde in the output path', () => {

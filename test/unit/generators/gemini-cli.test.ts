@@ -43,10 +43,10 @@ describe('generateGeminiCliConfig', () => {
     )
   })
 
-  it('should set transport to sse', () => {
+  it('should not include transport field', () => {
     const result = generateGeminiCliConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.transport).toBeUndefined()
   })
 
   it('should expand tilde in the output path', () => {

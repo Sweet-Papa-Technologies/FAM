@@ -7,7 +7,7 @@ function makeInput(overrides?: Partial<GeneratorInput>): GeneratorInput {
     profile: {
       name: 'amazon-q',
       description: 'Amazon Q agent',
-      config_target: '~/.aws/amazonq/agents/default.json',
+      config_target: '~/.aws/amazonq/mcp.json',
       allowed_servers: ['github'],
       denied_servers: [],
     },
@@ -43,16 +43,16 @@ describe('generateAmazonQConfig', () => {
     )
   })
 
-  it('should set transport to sse', () => {
+  it('should set type to http', () => {
     const result = generateAmazonQConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.type).toBe('http')
   })
 
   it('should expand tilde in the output path', () => {
     const result = generateAmazonQConfig(makeInput())
     expect(result.path).not.toContain('~')
-    expect(result.path).toContain('.aws/amazonq/agents/default.json')
+    expect(result.path).toContain('.aws/amazonq/mcp.json')
   })
 
   it('should report format as json', () => {

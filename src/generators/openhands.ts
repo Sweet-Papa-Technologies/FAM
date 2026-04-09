@@ -1,8 +1,9 @@
 /**
  * generators/openhands.ts — OpenHands config generator.
  *
- * Produces ~/.openhands/config.toml with an [mcp] section
- * and optional [llm] section when env_inject contains model config.
+ * Produces config.toml with [llm] and [mcp] sections.
+ * OpenHands uses sse_servers / shttp_servers / stdio_servers keys
+ * (not a generic "servers" key). Server objects use url + api_key.
  * TOML is manually constructed (no external dependency).
  */
 
@@ -50,10 +51,10 @@ export function generateOpenHandsConfig(input: GeneratorInput): GeneratorOutput 
     }
   }
 
-  // [mcp] section with the FAM server entry
+  // [mcp] section — OpenHands uses sse_servers (not generic "servers")
   lines.push('[mcp]')
-  lines.push('servers = [')
-  lines.push(`  { name = "fam", url = ${tomlString(mcpUrl)}, transport = "sse", token = ${tomlString(input.sessionToken)} }`)
+  lines.push('sse_servers = [')
+  lines.push(`  { url = ${tomlString(mcpUrl)}, api_key = ${tomlString(input.sessionToken)} }`)
   lines.push(']')
   lines.push('')
 

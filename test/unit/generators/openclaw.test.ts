@@ -123,8 +123,10 @@ describe('generateOpenClawModelsYaml', () => {
     expect(result).not.toBeNull()
     expect(result!.format).toBe('yaml')
     expect(result!.path).toContain('models.yaml')
+    expect(result!.content).toContain('tiers:')
     expect(result!.content).toContain('primary:')
-    expect(result!.content).toContain('anthropic/claude-sonnet-4-20250514')
+    expect(result!.content).toContain('provider: anthropic')
+    expect(result!.content).toContain('model: claude-sonnet-4-20250514')
     expect(result!.content).toContain('max_tokens: 8192')
   })
 
@@ -146,7 +148,8 @@ describe('generateOpenClawModelsYaml', () => {
       },
     }))
     expect(result!.content).toContain('fallback:')
-    expect(result!.content).toContain('openai/gpt-4o')
+    expect(result!.content).toContain('provider: openai')
+    expect(result!.content).toContain('model: gpt-4o')
     expect(result!.content).toContain('max_tokens: 4096')
   })
 
@@ -168,7 +171,8 @@ describe('generateOpenClawModelsYaml', () => {
       },
     }))
     expect(result!.content).toContain('economy:')
-    expect(result!.content).toContain('anthropic/claude-haiku-4-5')
+    expect(result!.content).toContain('provider: anthropic')
+    expect(result!.content).toContain('model: claude-haiku-4-5')
     expect(result!.content).toContain('max_tokens: 2048')
     expect(result!.content).toContain('temperature: 0.2')
   })

@@ -46,7 +46,7 @@ describe('generateRooCodeConfig', () => {
   it('should set transport to sse', () => {
     const result = generateRooCodeConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.type).toBe('sse')
   })
 
   it('should default to project-level .roo/mcp.json path', () => {

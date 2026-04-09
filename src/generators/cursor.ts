@@ -1,8 +1,9 @@
 /**
  * generators/cursor.ts — Cursor config generator.
  *
- * Produces ~/.cursor/mcp.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces ~/.cursor/mcp.json with an mcpServers entry.
+ * Cursor auto-detects transport from the url field (tries Streamable HTTP,
+ * falls back to SSE). No transport/type field needed.
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -17,7 +18,6 @@ export function generateCursorConfig(input: GeneratorInput): GeneratorOutput {
     mcpServers: {
       fam: {
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },

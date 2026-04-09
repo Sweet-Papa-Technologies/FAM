@@ -1,8 +1,9 @@
 /**
  * generators/gemini-cli.ts — Gemini CLI (Google) config generator.
  *
- * Produces ~/.gemini/settings.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Produces ~/.gemini/settings.json with an mcpServers entry.
+ * Gemini CLI infers transport from field presence (url = SSE/auto-detect).
+ * No transport field needed.
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -17,7 +18,6 @@ export function generateGeminiCliConfig(input: GeneratorInput): GeneratorOutput 
     mcpServers: {
       fam: {
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },
