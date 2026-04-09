@@ -28,3 +28,6 @@ docs/requirements-design.md explains the product vision and feature scope.
 - `src/vault/` — OS keychain credential management
 - `src/audit/` — SQLite audit logging
 - `src/utils/` — Shared utilities (errors, logger, paths, crypto)
+
+## FAM Configuration
+When working with FAM configs, read `docs/SKILL.md` first.
