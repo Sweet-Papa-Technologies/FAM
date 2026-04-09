@@ -11,6 +11,7 @@ import { expandTilde } from '../utils/paths.js'
 
 export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput {
   const entry = buildFamMcpEntry(input)
+  const warnings: string[] = []
 
   const config: Record<string, unknown> = {
     mcpServers: {
@@ -24,25 +25,39 @@ export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput
 
   // Model configuration via env block
   if (input.models?.default) {
-    const env: Record<string, string> = {}
     const m = input.models.default
 
-    if (m.api_key) env['ANTHROPIC_API_KEY'] = m.api_key
-    if (m.base_url) env['ANTHROPIC_BASE_URL'] = m.base_url
-    env['ANTHROPIC_MODEL'] = m.model_id
+    // Claude Code only supports Anthropic models (or Anthropic-compatible proxies like Bedrock/Vertex).
+    // Non-Anthropic providers (openai, openai_compatible, google) will fail because Claude Code's SDK
+    // speaks the Anthropic API format, not OpenAI or other formats.
+    const compatible = m.provider === 'anthropic' || m.provider === 'amazon_bedrock'
 
-    // Role-specific tier models
-    const roles = input.models.roles ?? {}
-    if (roles.sonnet_tier) env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = roles.sonnet_tier.model_id
-    if (roles.opus_tier) env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = roles.opus_tier.model_id
-    if (roles.haiku_tier) env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = roles.haiku_tier.model_id
+    if (!compatible) {
+      warnings.push(
+        `Profile "${input.profile.name}" assigns a "${m.provider}" model to a claude_code target. ` +
+        `Claude Code only supports Anthropic models — skipping model configuration. ` +
+        `MCP servers will still be configured.`,
+      )
+    } else {
+      const env: Record<string, string> = {}
 
-    // Merge with explicit env_inject (env_inject wins on conflict)
-    if (input.profile.env_inject) {
-      Object.assign(env, input.profile.env_inject)
+      if (m.api_key) env['ANTHROPIC_API_KEY'] = m.api_key
+      if (m.base_url) env['ANTHROPIC_BASE_URL'] = m.base_url
+      env['ANTHROPIC_MODEL'] = m.model_id
+
+      // Role-specific tier models
+      const roles = input.models.roles ?? {}
+      if (roles.sonnet_tier) env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = roles.sonnet_tier.model_id
+      if (roles.opus_tier) env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = roles.opus_tier.model_id
+      if (roles.haiku_tier) env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = roles.haiku_tier.model_id
+
+      // Merge with explicit env_inject (env_inject wins on conflict)
+      if (input.profile.env_inject) {
+        Object.assign(env, input.profile.env_inject)
+      }
+
+      config['env'] = env
     }
-
-    config['env'] = env
   }
 
   const outputPath = input.profile.config_target
@@ -53,5 +68,6 @@ export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput
     path: outputPath,
     content: JSON.stringify(config, null, 2) + '\n',
     format: 'json',
+    ...(warnings.length > 0 ? { warnings } : {}),
   }
 }

@@ -124,4 +124,46 @@ describe('Claude Code model config', () => {
     expect(parsed.mcpServers.fam).toBeDefined()
     expect(parsed.env).toBeDefined()
   })
+
+  it('should skip env block and warn for non-Anthropic providers', () => {
+    const result = generateClaudeCodeConfig(makeInput({
+      models: {
+        default: {
+          provider: 'openai_compatible',
+          model_id: 'gemma4:26b',
+          api_key: null,
+          base_url: 'http://192.168.1.99:11434/v1',
+        },
+        roles: {},
+      },
+    }))
+    const parsed = JSON.parse(result.content)
+    // Model env vars should NOT be written
+    expect(parsed.env).toBeUndefined()
+    // MCP servers should still be configured
+    expect(parsed.mcpServers).toBeDefined()
+    expect(parsed.mcpServers.fam).toBeDefined()
+    // Should emit a warning
+    expect(result.warnings).toBeDefined()
+    expect(result.warnings!.length).toBeGreaterThan(0)
+    expect(result.warnings![0]).toContain('openai_compatible')
+    expect(result.warnings![0]).toContain('Claude Code only supports Anthropic models')
+  })
+
+  it('should allow amazon_bedrock as compatible provider', () => {
+    const result = generateClaudeCodeConfig(makeInput({
+      models: {
+        default: {
+          provider: 'amazon_bedrock',
+          model_id: 'anthropic.claude-3-sonnet-20240229-v1:0',
+          api_key: 'bedrock-key',
+        },
+        roles: {},
+      },
+    }))
+    const parsed = JSON.parse(result.content)
+    expect(parsed.env).toBeDefined()
+    expect(parsed.env.ANTHROPIC_MODEL).toBe('anthropic.claude-3-sonnet-20240229-v1:0')
+    expect(result.warnings).toBeUndefined()
+  })
 })

@@ -69,13 +69,8 @@ mcp_servers:
 # ─── Profiles ──────────────────────────────────────────────────
 profiles:
   claude-code:
-    description: "Claude Code with Ollama gemma4 + all MCP servers"
+    description: "Claude Code with MCP servers (uses native Anthropic auth)"
     config_target: claude_code
-    model: ollama/gemma4
-    model_roles:
-      sonnet_tier: ollama/gemma4
-      opus_tier: ollama/gemma4
-      haiku_tier: ollama/gemma4
     allowed_servers:
       - playwright
       - gitlab

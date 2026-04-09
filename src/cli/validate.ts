@@ -161,6 +161,43 @@ function checkToolLimits(config: FamConfig): CheckResult[] {
   return results
 }
 
+function checkModelCompatibility(config: FamConfig): CheckResult[] {
+  const results: CheckResult[] = []
+
+  // Targets that only support Anthropic models
+  const ANTHROPIC_ONLY_TARGETS = new Set([
+    'claude_code',
+    'claude_mcp_config',
+  ])
+
+  for (const [profileName, profile] of Object.entries(config.profiles)) {
+    if (!ANTHROPIC_ONLY_TARGETS.has(profile.config_target)) continue
+
+    const modelRefs: string[] = []
+    if (profile.model) modelRefs.push(profile.model)
+    if (profile.model_roles) {
+      modelRefs.push(...Object.values(profile.model_roles))
+    }
+
+    for (const ref of modelRefs) {
+      const [providerName] = ref.split('/', 2)
+      const provider = config.models[providerName]
+      if (provider && provider.provider !== 'anthropic' && provider.provider !== 'amazon_bedrock') {
+        results.push({
+          status: 'warn',
+          label: `Model compatibility: ${profileName}`,
+          detail:
+            `Uses "${provider.provider}" model with ${profile.config_target} target. ` +
+            `Claude Code only supports Anthropic models — model config will be skipped.`,
+        })
+        break // One warning per profile is enough
+      }
+    }
+  }
+
+  return results
+}
+
 function checkProfileReferences(config: FamConfig): CheckResult[] {
   const results: CheckResult[] = []
   const serverNames = new Set(Object.keys(config.mcp_servers))
@@ -277,6 +314,10 @@ export function registerValidateCommand(program: Command): void {
         // 5. Check profile references
         const refChecks = checkProfileReferences(config)
         allChecks.push(...refChecks)
+
+        // 6. Check model compatibility
+        const compatChecks = checkModelCompatibility(config)
+        allChecks.push(...compatChecks)
 
         // Print results
         if (useJson) {
