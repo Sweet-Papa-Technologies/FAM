@@ -19,14 +19,15 @@ const baseInput: GeneratorInput = {
 }
 
 describe('OpenCode model config', () => {
-  it('should not include providers/agents when no models', () => {
+  it('should not include provider/model when no models', () => {
     const output = generateOpenCodeConfig(baseInput)
     const config = JSON.parse(output.content)
-    expect(config.providers).toBeUndefined()
-    expect(config.agents).toBeUndefined()
+    expect(config.provider).toBeUndefined()
+    expect(config.model).toBeUndefined()
+    expect(config.small_model).toBeUndefined()
   })
 
-  it('should include providers section with model config', () => {
+  it('should include provider section with model config', () => {
     const output = generateOpenCodeConfig({
       ...baseInput,
       models: {
@@ -39,13 +40,12 @@ describe('OpenCode model config', () => {
       },
     })
     const config = JSON.parse(output.content)
-    expect(config.providers).toBeDefined()
-    expect(config.providers['fam-anthropic']).toBeDefined()
-    expect(config.providers['fam-anthropic'].kind).toBe('anthropic')
-    expect(config.providers['fam-anthropic'].apiKey).toBe('sk-ant-test')
+    expect(config.provider).toBeDefined()
+    expect(config.provider['anthropic']).toBeDefined()
+    expect(config.provider['anthropic'].options.apiKey).toBe('sk-ant-test')
   })
 
-  it('should set coder agent to default model', () => {
+  it('should set root model to default in provider/model-id format', () => {
     const output = generateOpenCodeConfig({
       ...baseInput,
       models: {
@@ -58,8 +58,7 @@ describe('OpenCode model config', () => {
       },
     })
     const config = JSON.parse(output.content)
-    expect(config.agents.coder.model).toBe('claude-sonnet-4')
-    expect(config.agents.coder.provider).toBe('fam-anthropic')
+    expect(config.model).toBe('anthropic/claude-sonnet-4')
   })
 
   it('should support separate coder and task roles', () => {
@@ -86,8 +85,8 @@ describe('OpenCode model config', () => {
       },
     })
     const config = JSON.parse(output.content)
-    expect(config.agents.coder.model).toBe('claude-opus-4')
-    expect(config.agents.task.model).toBe('claude-haiku-4-5')
+    expect(config.model).toBe('anthropic/claude-opus-4')
+    expect(config.small_model).toBe('anthropic/claude-haiku-4-5')
   })
 
   it('should handle cross-provider task role', () => {
@@ -110,10 +109,12 @@ describe('OpenCode model config', () => {
     })
     const config = JSON.parse(output.content)
     // Should have two providers
-    expect(config.providers['fam-anthropic']).toBeDefined()
-    expect(config.providers['fam-openai-task']).toBeDefined()
-    expect(config.providers['fam-openai-task'].apiKey).toBe('sk-openai')
-    expect(config.agents.task.provider).toBe('fam-openai-task')
+    expect(config.provider['anthropic']).toBeDefined()
+    expect(config.provider['openai']).toBeDefined()
+    expect(config.provider['openai'].options.apiKey).toBe('sk-openai')
+    // Model strings
+    expect(config.model).toBe('anthropic/claude-opus-4')
+    expect(config.small_model).toBe('openai/gpt-4o-mini')
   })
 
   it('should include baseURL when base_url is set', () => {
@@ -130,7 +131,8 @@ describe('OpenCode model config', () => {
       },
     })
     const config = JSON.parse(output.content)
-    expect(config.providers['fam-openai_compatible'].baseURL).toBe('http://localhost:11434/v1')
+    expect(config.provider['openai'].options.baseURL).toBe('http://localhost:11434/v1')
+    expect(config.model).toBe('openai/llama-3.3-70b')
   })
 
   it('should still include mcp section with model config', () => {

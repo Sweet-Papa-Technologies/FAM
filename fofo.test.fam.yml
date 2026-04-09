@@ -1,0 +1,173 @@
+version: "0.1"
+
+settings:
+  daemon:
+    port: 7865
+    auto_start: true
+  audit:
+    enabled: true
+    retention_days: 30
+    export_format: json
+
+# ─── Credentials ───────────────────────────────────────────────
+credentials:
+  gitlab-pat:
+    type: api_key
+    description: "GitLab Personal Access Token (api scope required)"
+    env_var: GITLAB_PERSONAL_ACCESS_TOKEN
+    rotate_after_days: 90
+
+# ─── Models ────────────────────────────────────────────────────
+models:
+  ollama:
+    provider: openai_compatible
+    credential: null
+    base_url: http://192.168.1.99:11434/v1
+    models:
+      gemma4: "gemma4:26b-a4b-it-q4_K_M"
+
+# ─── MCP Servers ───────────────────────────────────────────────
+mcp_servers:
+  playwright:
+    command: npx
+    args:
+      - "@playwright/mcp@latest"
+      - "--headless"
+    transport: stdio
+    credential: null
+    description: "Playwright browser automation (headless Chrome)"
+
+  gitlab:
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-gitlab"
+    transport: stdio
+    credential: gitlab-pat
+    description: "GitLab repos, issues, merge requests"
+    env:
+      GITLAB_API_URL: https://gitlab.com/api/v4
+
+  gmail:
+    command: npx
+    args:
+      - "@gongrzhe/server-gmail-autoauth-mcp"
+    transport: stdio
+    credential: null
+    description: "Gmail email access (requires one-time Google OAuth setup)"
+
+  filesystem:
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "/Users/fterry"
+    transport: stdio
+    credential: null
+    description: "Local filesystem access"
+
+# ─── Profiles ──────────────────────────────────────────────────
+profiles:
+  claude-code:
+    description: "Claude Code with Ollama gemma4 + all MCP servers"
+    config_target: claude_code
+    model: ollama/gemma4
+    model_roles:
+      sonnet_tier: ollama/gemma4
+      opus_tier: ollama/gemma4
+      haiku_tier: ollama/gemma4
+    allowed_servers:
+      - playwright
+      - gitlab
+      - gmail
+      - filesystem
+    max_tools: 50
+
+  opencode:
+    description: "OpenCode with Ollama gemma4 + all MCP servers"
+    config_target: opencode
+    model: ollama/gemma4
+    model_roles:
+      coder: ollama/gemma4
+      task: ollama/gemma4
+    allowed_servers:
+      - playwright
+      - gitlab
+      - gmail
+      - filesystem
+    max_tools: 50
+
+  gemini-cli:
+    description: "Gemini CLI with Ollama gemma4 + all MCP servers"
+    config_target: gemini_cli
+    model: ollama/gemma4
+    allowed_servers:
+      - playwright
+      - gitlab
+      - gmail
+      - filesystem
+    max_tools: 50
+
+# ─── Generators ────────────────────────────────────────────────
+generators:
+  claude_code:
+    output: ~/.claude/settings.json
+    format: claude_mcp_config
+  opencode:
+    output: ~/.config/opencode/opencode.json
+    format: opencode_config
+  gemini_cli:
+    output: ~/.gemini/settings.json
+    format: gemini_mcp_config
+
+# ─── Native Tools ──────────────────────────────────────────────
+native_tools:
+  whoami:
+    enabled: true
+    description: "Get current profile and permissions"
+  health:
+    enabled: true
+    description: "Check daemon and server health"
+  log_action:
+    enabled: true
+    description: "Log actions to audit trail"
+  list_servers:
+    enabled: true
+    description: "List available MCP servers and status"
+  get_knowledge:
+    enabled: true
+    description: "Retrieve shared knowledge entries"
+  set_knowledge:
+    enabled: true
+    description: "Store shared knowledge entries"
+  search_knowledge:
+    enabled: true
+    description: "Search shared knowledge"
+  get_audit_log:
+    enabled: true
+    description: "Query the audit log"
+  list_profiles:
+    enabled: true
+    description: "List all configured profiles"
+
+# ─── Instructions ──────────────────────────────────────────────
+instructions:
+  enabled: true
+  output_dir: ~/.fam/instructions/
+  per_profile:
+    claude-code:
+      extra_context: |
+        Connected to Ollama (gemma4) on 192.168.1.99 via FAM proxy.
+        Use Playwright for browser automation tasks.
+        Use GitLab for repository operations.
+        Log significant actions via fam__log_action.
+    opencode:
+      extra_context: |
+        Connected to Ollama (gemma4) on 192.168.1.99 via FAM proxy.
+        Use Playwright for browser automation tasks.
+        Use GitLab for repository operations.
+    gemini-cli:
+      extra_context: |
+        Connected to Ollama (gemma4) on 192.168.1.99 via FAM proxy.
+        Use Playwright for browser automation tasks.
+        Use GitLab for repository operations.

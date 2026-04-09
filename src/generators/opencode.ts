@@ -1,11 +1,12 @@
 /**
  * generators/opencode.ts — OpenCode config generator.
  *
- * Produces opencode.json MCP section with a remote FAM entry.
- * OpenCode uses "mcp" as the root key (not "mcpServers") and
- * "type": "remote" for HTTP/SSE servers.
+ * Produces opencode.json with FAM MCP entry + model configuration.
+ * OpenCode uses singular keys: "mcp", "provider", "agent".
+ * Built-in roles (coder/task) map to root "model" / "small_model".
+ * Model strings use "provider/model-id" format.
  *
- * See: https://opencode.ai/docs/mcp-servers
+ * See: https://opencode.ai/docs/config
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -26,7 +27,9 @@ export function generateOpenCodeConfig(input: GeneratorInput): GeneratorOutput {
     },
   }
 
-  // Model configuration via providers + agents sections
+  // Model configuration via root-level model/small_model + provider options
+  // OpenCode uses singular "provider" and "agent" keys (not plural).
+  // Built-in roles (coder/task) map to root "model" / "small_model".
   if (input.models?.default) {
     const m = input.models.default
     const providerKindMap: Record<string, string> = {
@@ -35,41 +38,48 @@ export function generateOpenCodeConfig(input: GeneratorInput): GeneratorOutput {
       openai_compatible: 'openai',
       google: 'google',
     }
-    const providerId = `fam-${m.provider}`
-
-    config['providers'] = {
-      [providerId]: {
-        kind: providerKindMap[m.provider] ?? 'openai',
-        apiKey: m.api_key ?? '',
-        ...(m.base_url ? { baseURL: m.base_url } : {}),
-      },
-    }
-
-    const agents: Record<string, unknown> = {}
+    const providerName = providerKindMap[m.provider] ?? 'openai'
     const roles = input.models.roles ?? {}
 
+    // Root-level model in "provider/model-id" format (maps to coder role)
     if (roles.coder) {
-      agents['coder'] = { model: roles.coder.model_id, provider: providerId }
+      const coderProvider = providerKindMap[roles.coder.provider] ?? 'openai'
+      config['model'] = `${coderProvider}/${roles.coder.model_id}`
     } else {
-      agents['coder'] = { model: m.model_id, provider: providerId }
+      config['model'] = `${providerName}/${m.model_id}`
     }
 
+    // small_model maps to the task role
     if (roles.task) {
-      // If task uses a different provider, add that provider too
-      if (roles.task.provider !== m.provider || roles.task.base_url !== m.base_url) {
-        const taskProviderId = `fam-${roles.task.provider}-task`
-        ;(config['providers'] as Record<string, unknown>)[taskProviderId] = {
-          kind: providerKindMap[roles.task.provider] ?? 'openai',
-          apiKey: roles.task.api_key ?? '',
-          ...(roles.task.base_url ? { baseURL: roles.task.base_url } : {}),
-        }
-        agents['task'] = { model: roles.task.model_id, provider: taskProviderId }
-      } else {
-        agents['task'] = { model: roles.task.model_id, provider: providerId }
+      const taskProvider = providerKindMap[roles.task.provider] ?? 'openai'
+      config['small_model'] = `${taskProvider}/${roles.task.model_id}`
+    }
+
+    // Provider options (base URL, API key, etc.)
+    const providerOptions: Record<string, unknown> = {}
+    if (m.api_key) providerOptions['apiKey'] = m.api_key
+    if (m.base_url) providerOptions['baseURL'] = m.base_url
+
+    // Collect all unique providers that need options
+    const providerConfigs: Record<string, Record<string, unknown>> = {}
+    if (Object.keys(providerOptions).length > 0) {
+      providerConfigs[providerName] = { options: providerOptions }
+    }
+
+    // Add task provider options if it differs
+    if (roles.task && (roles.task.provider !== m.provider || roles.task.base_url !== m.base_url)) {
+      const taskProviderName = providerKindMap[roles.task.provider] ?? 'openai'
+      const taskOptions: Record<string, unknown> = {}
+      if (roles.task.api_key) taskOptions['apiKey'] = roles.task.api_key
+      if (roles.task.base_url) taskOptions['baseURL'] = roles.task.base_url
+      if (Object.keys(taskOptions).length > 0) {
+        providerConfigs[taskProviderName] = { options: taskOptions }
       }
     }
 
-    config['agents'] = agents
+    if (Object.keys(providerConfigs).length > 0) {
+      config['provider'] = providerConfigs
+    }
   }
 
   const outputPath = expandTilde('~/.config/opencode/opencode.json')
