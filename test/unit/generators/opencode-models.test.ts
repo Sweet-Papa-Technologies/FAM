@@ -117,7 +117,7 @@ describe('OpenCode model config', () => {
     expect(config.small_model).toBe('openai/gpt-4o-mini')
   })
 
-  it('should include baseURL when base_url is set', () => {
+  it('should register custom provider with npm package and models for openai_compatible', () => {
     const output = generateOpenCodeConfig({
       ...baseInput,
       models: {
@@ -131,8 +131,13 @@ describe('OpenCode model config', () => {
       },
     })
     const config = JSON.parse(output.content)
-    expect(config.provider['openai'].options.baseURL).toBe('http://localhost:11434/v1')
-    expect(config.model).toBe('openai/llama-3.3-70b')
+    // Detected as Ollama by port 11434
+    const provider = config.provider['ollama']
+    expect(provider).toBeDefined()
+    expect(provider.npm).toBe('@ai-sdk/openai-compatible')
+    expect(provider.options.baseURL).toBe('http://localhost:11434/v1')
+    expect(provider.models['llama-3.3-70b']).toBeDefined()
+    expect(config.model).toBe('ollama/llama-3.3-70b')
   })
 
   it('should still include mcp section with model config', () => {
