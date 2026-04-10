@@ -56,8 +56,14 @@ export function generateOpenCodeConfig(input: GeneratorInput): GeneratorOutput {
     }
 
     // Provider options (base URL, API key, etc.)
+    // OpenAI SDK requires an apiKey to initialize, even for keyless endpoints
+    // like Ollama. Use a placeholder when no real key is configured.
     const providerOptions: Record<string, unknown> = {}
-    if (m.api_key) providerOptions['apiKey'] = m.api_key
+    if (m.api_key) {
+      providerOptions['apiKey'] = m.api_key
+    } else if (m.provider === 'openai_compatible') {
+      providerOptions['apiKey'] = 'not-needed'
+    }
     if (m.base_url) providerOptions['baseURL'] = m.base_url
 
     // Collect all unique providers that need options
@@ -70,7 +76,11 @@ export function generateOpenCodeConfig(input: GeneratorInput): GeneratorOutput {
     if (roles.task && (roles.task.provider !== m.provider || roles.task.base_url !== m.base_url)) {
       const taskProviderName = providerKindMap[roles.task.provider] ?? 'openai'
       const taskOptions: Record<string, unknown> = {}
-      if (roles.task.api_key) taskOptions['apiKey'] = roles.task.api_key
+      if (roles.task.api_key) {
+        taskOptions['apiKey'] = roles.task.api_key
+      } else if (roles.task.provider === 'openai_compatible') {
+        taskOptions['apiKey'] = 'not-needed'
+      }
       if (roles.task.base_url) taskOptions['baseURL'] = roles.task.base_url
       if (Object.keys(taskOptions).length > 0) {
         providerConfigs[taskProviderName] = { options: taskOptions }
