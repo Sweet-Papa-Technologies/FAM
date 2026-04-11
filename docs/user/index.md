@@ -36,6 +36,7 @@ enforces per-tool access scoping, and logs everything
 |---|---|
 | [Installation](./installation.md) | Install FAM from npm or build from source |
 | [OpenCode Setup](./opencode-setup.md) | Connect OpenCode to FAM step by step |
+| [OpenClaw Setup](./openclaw-setup.md) | Install OpenClaw and configure its MCP + tiered models via FAM |
 
 ---
 
