@@ -93,9 +93,8 @@ profiles:
     max_tools: 50
 
   gemini-cli:
-    description: "Gemini CLI with Ollama gemma4 + all MCP servers"
+    description: "Gemini CLI with MCP servers (uses native Google auth)"
     config_target: gemini_cli
-    model: ollama/gemma4
     allowed_servers:
       - playwright
       - gitlab

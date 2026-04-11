@@ -164,14 +164,17 @@ function checkToolLimits(config: FamConfig): CheckResult[] {
 function checkModelCompatibility(config: FamConfig): CheckResult[] {
   const results: CheckResult[] = []
 
-  // Targets that only support Anthropic models
-  const ANTHROPIC_ONLY_TARGETS = new Set([
-    'claude_code',
-    'claude_mcp_config',
-  ])
+  // Per-target: which FAM provider types the tool actually supports natively
+  const TARGET_COMPATIBILITY: Record<string, { allowed: Set<string>; label: string }> = {
+    claude_code: { allowed: new Set(['anthropic', 'amazon_bedrock']), label: 'Claude Code (Anthropic models)' },
+    claude_mcp_config: { allowed: new Set(['anthropic', 'amazon_bedrock']), label: 'Claude Code (Anthropic models)' },
+    gemini_cli: { allowed: new Set(['google']), label: 'Gemini CLI (Google models only)' },
+    gemini_mcp_config: { allowed: new Set(['google']), label: 'Gemini CLI (Google models only)' },
+  }
 
   for (const [profileName, profile] of Object.entries(config.profiles)) {
-    if (!ANTHROPIC_ONLY_TARGETS.has(profile.config_target)) continue
+    const compat = TARGET_COMPATIBILITY[profile.config_target]
+    if (!compat) continue
 
     const modelRefs: string[] = []
     if (profile.model) modelRefs.push(profile.model)
@@ -182,13 +185,13 @@ function checkModelCompatibility(config: FamConfig): CheckResult[] {
     for (const ref of modelRefs) {
       const [providerName] = ref.split('/', 2)
       const provider = config.models[providerName]
-      if (provider && provider.provider !== 'anthropic' && provider.provider !== 'amazon_bedrock') {
+      if (provider && !compat.allowed.has(provider.provider)) {
         results.push({
           status: 'warn',
           label: `Model compatibility: ${profileName}`,
           detail:
             `Uses "${provider.provider}" model with ${profile.config_target} target. ` +
-            `Claude Code only supports Anthropic models — model config will be skipped.`,
+            `${compat.label} — model config will be skipped.`,
         })
         break // One warning per profile is enough
       }

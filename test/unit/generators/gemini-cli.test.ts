@@ -67,4 +67,45 @@ describe('generateGeminiCliConfig', () => {
     const parsed = JSON.parse(result.content)
     expect(parsed.mcpServers.fam.url).toBe('http://localhost:7865/mcp')
   })
+
+  it('should include model config for Google provider', () => {
+    const result = generateGeminiCliConfig(makeInput({
+      models: {
+        default: {
+          provider: 'google',
+          model_id: 'gemini-2.0-flash',
+          api_key: 'google-key',
+        },
+        roles: {},
+      },
+    }))
+    const parsed = JSON.parse(result.content)
+    expect(parsed.model).toBeDefined()
+    expect(parsed.model.name).toBe('gemini-2.0-flash')
+  })
+
+  it('should skip model config and warn for non-Google providers', () => {
+    const result = generateGeminiCliConfig(makeInput({
+      models: {
+        default: {
+          provider: 'openai_compatible',
+          model_id: 'gemma4:26b',
+          api_key: null,
+          base_url: 'http://192.168.1.99:11434/v1',
+        },
+        roles: {},
+      },
+    }))
+    const parsed = JSON.parse(result.content)
+    // Model should NOT be written
+    expect(parsed.model).toBeUndefined()
+    // MCP servers should still be configured
+    expect(parsed.mcpServers).toBeDefined()
+    expect(parsed.mcpServers.fam).toBeDefined()
+    // Should emit a warning
+    expect(result.warnings).toBeDefined()
+    expect(result.warnings!.length).toBeGreaterThan(0)
+    expect(result.warnings![0]).toContain('openai_compatible')
+    expect(result.warnings![0]).toContain('Gemini CLI only supports Google models')
+  })
 })

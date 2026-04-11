@@ -24,10 +24,21 @@ export function generateGeminiCliConfig(input: GeneratorInput): GeneratorOutput 
   }
 
   // Model configuration
+  // Gemini CLI only supports Google's models (Gemini API key, Google account, or Vertex AI).
+  // Non-Google providers (anthropic, openai, openai_compatible) are not supported.
   if (input.models?.default) {
-    config['model'] = { name: input.models.default.model_id }
-    if (input.models.default.api_key) {
-      warnings.push(`Gemini CLI: Set GEMINI_API_KEY in your environment or ~/.gemini/.env`)
+    const m = input.models.default
+    if (m.provider === 'google') {
+      config['model'] = { name: m.model_id }
+      if (m.api_key) {
+        warnings.push(`Gemini CLI: Set GEMINI_API_KEY in your environment or ~/.gemini/.env`)
+      }
+    } else {
+      warnings.push(
+        `Profile "${input.profile.name}" assigns a "${m.provider}" model to a gemini_cli target. ` +
+        `Gemini CLI only supports Google models (Gemini API / Vertex AI) — skipping model configuration. ` +
+        `MCP servers will still be configured.`,
+      )
     }
   }
 
