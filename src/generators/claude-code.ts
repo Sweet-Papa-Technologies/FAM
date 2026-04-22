@@ -1,8 +1,16 @@
 /**
  * generators/claude-code.ts — Claude Code config generator.
  *
- * Produces ~/.claude/settings.json with an mcpServers entry
- * pointing at the FAM daemon.
+ * Claude Code reads from TWO different files with different schemas:
+ *
+ *   1. ~/.claude.json            → MCP servers (top-level `mcpServers`),
+ *                                   account state, per-project mcpServers map.
+ *                                   This is what `claude mcp list` reads from.
+ *   2. ~/.claude/settings.json   → User settings (env block, permissions, hooks).
+ *
+ * The primary output is ~/.claude.json with user-scope mcpServers (entry shape:
+ * `{ type: "http", url, headers }`). The env block, when a compatible model is
+ * configured, is emitted as a secondary file at ~/.claude/settings.json.
  */
 
 import type { GeneratorInput, GeneratorOutput } from './types.js'
@@ -13,23 +21,29 @@ export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput
   const entry = buildFamMcpEntry(input)
   const warnings: string[] = []
 
-  const config: Record<string, unknown> = {
+  // --- Primary file: ~/.claude.json with mcpServers ----------------------
+  const mainConfig: Record<string, unknown> = {
     mcpServers: {
       fam: {
+        type: 'http',
         url: entry.url,
-        transport: entry.transport,
         headers: entry.headers,
       },
     },
   }
 
-  // Model configuration via env block
+  const outputPath = input.profile.config_target
+    ? expandTilde(input.profile.config_target)
+    : expandTilde('~/.claude.json')
+
+  const additionalFiles: GeneratorOutput['additionalFiles'] = []
+
+  // --- Secondary file: ~/.claude/settings.json with env block ------------
   if (input.models?.default) {
     const m = input.models.default
 
-    // Claude Code only supports Anthropic models (or Anthropic-compatible proxies like Bedrock/Vertex).
-    // Non-Anthropic providers (openai, openai_compatible, google) will fail because Claude Code's SDK
-    // speaks the Anthropic API format, not OpenAI or other formats.
+    // Claude Code only supports Anthropic models (or Anthropic-compatible proxies
+    // like Bedrock/Vertex). Non-Anthropic providers are skipped with a warning.
     const compatible = m.provider === 'anthropic' || m.provider === 'amazon_bedrock'
 
     if (!compatible) {
@@ -45,29 +59,28 @@ export function generateClaudeCodeConfig(input: GeneratorInput): GeneratorOutput
       if (m.base_url) env['ANTHROPIC_BASE_URL'] = m.base_url
       env['ANTHROPIC_MODEL'] = m.model_id
 
-      // Role-specific tier models
       const roles = input.models.roles ?? {}
       if (roles.sonnet_tier) env['ANTHROPIC_DEFAULT_SONNET_MODEL'] = roles.sonnet_tier.model_id
       if (roles.opus_tier) env['ANTHROPIC_DEFAULT_OPUS_MODEL'] = roles.opus_tier.model_id
       if (roles.haiku_tier) env['ANTHROPIC_DEFAULT_HAIKU_MODEL'] = roles.haiku_tier.model_id
 
-      // Merge with explicit env_inject (env_inject wins on conflict)
       if (input.profile.env_inject) {
         Object.assign(env, input.profile.env_inject)
       }
 
-      config['env'] = env
+      additionalFiles.push({
+        path: expandTilde('~/.claude/settings.json'),
+        content: JSON.stringify({ env }, null, 2) + '\n',
+        format: 'json',
+      })
     }
   }
 
-  const outputPath = input.profile.config_target
-    ? expandTilde(input.profile.config_target)
-    : expandTilde('~/.claude/settings.json')
-
   return {
     path: outputPath,
-    content: JSON.stringify(config, null, 2) + '\n',
+    content: JSON.stringify(mainConfig, null, 2) + '\n',
     format: 'json',
     ...(warnings.length > 0 ? { warnings } : {}),
+    ...(additionalFiles.length > 0 ? { additionalFiles } : {}),
   }
 }

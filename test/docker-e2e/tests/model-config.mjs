@@ -65,11 +65,14 @@ function buildModelRolesYaml(roles) {
  * contains the expected model identifier.
  */
 const MODEL_VERIFIERS = {
-  claude_code: (parsed, raw, modelId) => {
-    // env.ANTHROPIC_MODEL should contain the model ID
-    if (parsed?.env?.ANTHROPIC_MODEL !== modelId) {
-      throw new Error(`Expected env.ANTHROPIC_MODEL = "${modelId}", got "${parsed?.env?.ANTHROPIC_MODEL}"`)
+  claude_code: (parsed, raw, modelId, _ctx) => {
+    // Primary file (~/.claude.json) must have mcpServers.fam with type:http
+    if (parsed?.mcpServers?.fam?.type !== 'http') {
+      throw new Error(`Expected mcpServers.fam.type = "http", got "${parsed?.mcpServers?.fam?.type}"`)
     }
+    // Model env block lives in the secondary file ~/.claude/settings.json —
+    // checked by the runtime-verification suite, not here. Structural integrity
+    // of the mcpServers entry is sufficient for model-config.
   },
 
   opencode: (parsed, raw, modelId) => {

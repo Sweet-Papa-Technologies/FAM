@@ -23,6 +23,13 @@ export interface GeneratorOutput {
   content: string
   format: string
   warnings?: string[]
+  /**
+   * Additional files this generator needs to write alongside the primary output.
+   * Used when a target agent reads from multiple files (e.g. Claude Code reads
+   * MCP config from ~/.claude.json but env vars from ~/.claude/settings.json).
+   * Secondary files are always written with import_and_manage merge semantics.
+   */
+  additionalFiles?: Array<{ path: string; content: string; format: string }>
 }
 
 // ─── Instruction File Input ────────────────────────────────────────

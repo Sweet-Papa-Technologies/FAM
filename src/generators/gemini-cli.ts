@@ -18,6 +18,7 @@ export function generateGeminiCliConfig(input: GeneratorInput): GeneratorOutput 
     mcpServers: {
       fam: {
         url: entry.url,
+        type: 'http',
         headers: entry.headers,
       },
     },

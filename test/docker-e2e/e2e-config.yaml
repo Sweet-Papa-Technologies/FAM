@@ -9,7 +9,10 @@ agents:
   claude_code:
     display_name: "Claude Code"
     config_target: claude_code
-    output_path: "~/.claude/settings.json"
+    # Claude Code 2.x: MCP config lives in ~/.claude.json (user-scope, top-level mcpServers).
+    # The env block (ANTHROPIC_MODEL etc.) is written as a secondary file at
+    # ~/.claude/settings.json via the generator's additionalFiles mechanism.
+    output_path: "~/.claude.json"
     output_format: json
     installable: true
     install_command: "npm i -g @anthropic-ai/claude-code"
@@ -21,6 +24,7 @@ agents:
       - haiku_tier
     expected_structure:
       - "mcpServers.fam.url"
+      - "mcpServers.fam.type"
       - "mcpServers.fam.headers.Authorization"
     verify_command: "claude --version"
 
@@ -238,10 +242,24 @@ runtime:
   timeout_per_category_ms: 300000
 
 llm:
+  # Runtime-verification tests use this model via Ollama for live prompt smoke tests.
+  # Pull it on the host with: `ollama pull gemma4:e2b`
+  # If unreachable, live prompt checks are skipped (structural checks still run).
   base_url: "http://host.docker.internal:11434/v1"
   provider: "openai_compatible"
-  model_id: "gemma4"
+  model_id: "gemma4:e2b"
   api_key: "ollama"
+
+# Agents with an officially-supported runtime verifier.
+# Agents not in this list are tested structurally only (config generation,
+# not runtime visibility) and are considered experimental.
+runtime_verified_agents:
+  - claude_code
+  - opencode
+  - gemini_cli
+  - aider
+  - openclaw
+  - amazon_q  # skipped by default unless E2E_AMAZONQ_AUTHED=1
 
 categories:
   - core-cli
@@ -250,3 +268,4 @@ categories:
   - vault
   - agent-integration
   - model-config
+  - runtime-verification

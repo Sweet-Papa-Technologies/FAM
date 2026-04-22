@@ -338,6 +338,28 @@ async function executeApply(
       }
       updated++
     }
+
+    // 5b. Write any additional files the generator produced (e.g. Claude Code
+    // splits its output into ~/.claude.json for MCP + ~/.claude/settings.json
+    // for env). Additional files always use import_and_manage to preserve
+    // user-added keys — they're not prompted for individually.
+    if (!dryRun && output.additionalFiles && output.additionalFiles.length > 0) {
+      for (const extra of output.additionalFiles) {
+        const extraPath = expandTilde(extra.path)
+        validateOutputPath(extraPath)
+        const extraDir = extraPath.substring(0, extraPath.lastIndexOf('/'))
+        if (extraDir) mkdirSync(extraDir, { recursive: true })
+
+        if (existsSync(extraPath)) {
+          applyMergeStrategy(extraPath, extra.content, 'import_and_manage')
+          console.log(chalk.green(`  Merged ${extraPath}`))
+        } else {
+          writeFileSync(extraPath, extra.content, 'utf-8')
+          chmodSync(extraPath, 0o600)
+          console.log(chalk.green(`  Created ${extraPath}`))
+        }
+      }
+    }
   }
 
   // 6. Generate instruction files (FAM.md per profile)

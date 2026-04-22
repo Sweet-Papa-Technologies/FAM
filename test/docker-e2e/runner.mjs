@@ -42,6 +42,7 @@ const CATEGORY_MODULES = {
   'vault': './tests/vault.mjs',
   'agent-integration': './tests/agent-integration.mjs',
   'model-config': './tests/model-config.mjs',
+  'runtime-verification': './tests/runtime-verification.mjs',
 }
 
 // ── Run ───────────────────────────────────────────────────────────────

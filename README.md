@@ -60,21 +60,45 @@ No root/sudo required. See [installation docs](docs/user/installation.md) for al
 | `fam init` interactive setup | Tested | Tool selection, MCP config import, scaffold generation |
 | Hot-reload on config change | Tested | POST /api/v1/reload preserves upstream connections |
 
-### Docker E2E (52 pass, 0 fail, 1 skip)
+### Docker E2E
 
 Run via `npm run test:docker` — spins up a Linux container with Node 22, real gnome-keyring, and installs real agents.
 
 | Feature | Status | Notes |
 |---|---|---|
-| CLI lifecycle (plan/apply/validate/status/drift) | Tested | 7 tests, full Terraform-style workflow |
-| MCP daemon protocol | Tested | 12 tests: health, tools/list, tools/call, auth, native tools, shutdown |
+| CLI lifecycle (plan/apply/validate/status/drift) | Tested | Full Terraform-style workflow |
+| MCP daemon protocol | Tested | health, tools/list, tools/call, auth, native tools, shutdown |
 | Config generation (all 17 agents) | Tested | Every generator produces valid output with correct structure |
-| Linux keychain (gnome-keyring) | Tested | 5 tests: set/get/delete/overwrite via real libsecret |
-| LLM model config applied to agents | Tested | 8 agents: model provider resolution verified in generated configs |
-| Claude Code integration | Tested | Installed in container, config generated and verified |
-| Aider integration | Tested | pip installed, `.aider.conf.yml` generated and verified |
-| OpenClaw integration | Tested | npm installed, `openclaw.json` + `models.yaml` generated and verified |
-| OpenHands integration | Skipped | pip dependency conflict (upstream issue) |
+| Linux keychain (gnome-keyring) | Tested | set/get/delete/overwrite via real libsecret |
+| LLM model config applied to agents | Tested | Model provider resolution verified in generated configs |
+| **Runtime verification (officially supported agents)** | Tested | Installs each agent, runs its own `mcp list`, asserts FAM is visible |
+
+#### Officially supported agents (runtime-verified)
+
+For these six agents, the CI container installs the real binary, runs `fam apply`, starts the daemon, then executes the agent's own CLI to confirm FAM is registered. If the model is served by a reachable Ollama endpoint with `gemma4:e2b` pulled, a live prompt is also sent.
+
+| Agent | Runtime command asserted | Live prompt against `gemma4:e2b` |
+|---|---|---|
+| Claude Code | `claude mcp list`, `claude mcp get fam` | Not applicable (Anthropic-only) |
+| OpenCode | `opencode mcp list` | Yes, via `opencode run` (if Ollama reachable) |
+| Gemini CLI | `gemini mcp list` | Not applicable (Google-only) |
+| Aider | `aider --show-model-settings` | Yes, via `aider --message` (if Ollama reachable) |
+| OpenClaw | `openclaw mcp list` / `--check` | Opt-in |
+| Amazon Q | `q mcp list` | Skipped unless `E2E_AMAZONQ_AUTHED=1` (requires pre-baked AWS SSO cache) |
+
+To enable the live prompt leg of the runtime tests:
+```bash
+ollama pull gemma4:e2b
+E2E_LLM_URL=http://host.docker.internal:11434/v1 npm run test:docker runtime-verification
+```
+If Ollama isn't reachable, the structural checks still run; only the live prompt assertions are skipped.
+
+#### Experimental / schema-only (config generated, not runtime-verified)
+
+Generators are tested but the agent itself isn't run against FAM in CI. These agents may work — they just haven't been end-to-end verified on every release.
+
+- GUI-only: Cursor, VS Code, Windsurf, Zed, Cline, Roo Code
+- Other: OpenHands (pip dependency conflict), NemoClaw, GitHub Copilot CLI, Continue.dev, Generic
 
 ### Not Yet Tested
 
@@ -87,25 +111,29 @@ Run via `npm run test:docker` — spins up a Linux container with Node 22, real 
 
 ## Supported Agents
 
-| Agent | Config Target | MCP | Model Config |
-|---|---|---|---|
-| Claude Code | `claude_code` | `~/.claude/settings.json` | env block (API key, model, tiers) |
-| OpenCode | `opencode` | `~/.config/opencode/opencode.json` | providers + agents (coder/task) |
-| OpenHands | `openhands` | `~/.openhands/config.toml` | [llm] section |
-| Aider | `aider` | -- | `.aider.conf.yml` (model/editor/weak) |
-| Continue.dev | `continue_dev` | `~/.continue/config.yaml` | models[] with roles |
-| OpenClaw | `openclaw` | `~/.openclaw/openclaw.json` | providers + tiers (primary/fallback/economy) |
-| NemoClaw | `nemoclaw` | `~/.nemoclaw/openclaw.json` | env var hints (NEMOCLAW_*) |
-| Gemini CLI | `gemini_cli` | `~/.gemini/settings.json` | model.name |
-| Copilot CLI | `github_copilot` | `~/.copilot/mcp-config.json` | env var hints |
-| Cursor | `cursor` | `~/.cursor/mcp.json` | GUI-only |
-| VS Code | `vscode` | `.vscode/mcp.json` | Depends on extension |
-| Windsurf | `windsurf` | `~/.codeium/windsurf/mcp_config.json` | GUI-only |
-| Zed | `zed` | Zed settings.json | GUI-only |
-| Cline | `cline` | `cline_mcp_settings.json` | Partial |
-| Roo Code | `roo_code` | `.roo/mcp.json` | GUI-only |
-| Amazon Q | `amazon_q` | `~/.aws/amazonq/...` | CLI command hint |
-| Generic | `generic` | `~/.fam/configs/<name>.json` | -- |
+Legend: **✅ Runtime-verified** = the agent is installed in CI and asked to confirm FAM is registered. **🧪 Experimental** = config is generated and structurally tested, but the agent's runtime isn't exercised in CI.
+
+| Agent | Support | Config Target | MCP | Model Config |
+|---|---|---|---|---|
+| Claude Code | ✅ | `claude_code` | `~/.claude/settings.json` | env block (API key, model, tiers) |
+| OpenCode | ✅ | `opencode` | `~/.config/opencode/opencode.json` | providers + agents (coder/task) |
+| Gemini CLI | ✅ | `gemini_cli` | `~/.gemini/settings.json` | model.name |
+| Aider | ✅ | `aider` | -- | `.aider.conf.yml` (model/editor/weak) |
+| OpenClaw | ✅ | `openclaw` | `~/.openclaw/openclaw.json` | providers + tiers (primary/fallback/economy) |
+| Amazon Q | ✅¹ | `amazon_q` | `~/.aws/amazonq/...` | CLI command hint |
+| OpenHands | 🧪 | `openhands` | `~/.openhands/config.toml` | [llm] section |
+| Continue.dev | 🧪 | `continue_dev` | `~/.continue/config.yaml` | models[] with roles |
+| NemoClaw | 🧪 | `nemoclaw` | `~/.nemoclaw/openclaw.json` | env var hints (NEMOCLAW_*) |
+| Copilot CLI | 🧪 | `github_copilot` | `~/.copilot/mcp-config.json` | env var hints |
+| Cursor | 🧪 | `cursor` | `~/.cursor/mcp.json` | GUI-only |
+| VS Code | 🧪 | `vscode` | `.vscode/mcp.json` | Depends on extension |
+| Windsurf | 🧪 | `windsurf` | `~/.codeium/windsurf/mcp_config.json` | GUI-only |
+| Zed | 🧪 | `zed` | Zed settings.json | GUI-only |
+| Cline | 🧪 | `cline` | `cline_mcp_settings.json` | Partial |
+| Roo Code | 🧪 | `roo_code` | `.roo/mcp.json` | GUI-only |
+| Generic | 🧪 | `generic` | `~/.fam/configs/<name>.json` | -- |
+
+¹ Amazon Q runtime verification requires AWS SSO auth. CI skips it unless `E2E_AMAZONQ_AUTHED=1` is set with a pre-baked SSO cache.
 
 ## Roadmap
 
@@ -179,10 +207,16 @@ FAM has three test layers:
 | Docker E2E | `npm run test:docker` | 52 tests — full lifecycle in Linux container with real keychain + real agents | Docker |
 | Docker (one category) | `bash test/docker-e2e/run.sh vault` | Run a single test category | Docker |
 
-**Docker E2E categories:** `core-cli`, `daemon`, `generators`, `vault`, `agent-integration`, `model-config`
+**Docker E2E categories:** `core-cli`, `daemon`, `generators`, `vault`, `agent-integration`, `model-config`, `runtime-verification`
 
-To use a custom LLM endpoint for model config tests:
+Run one category only:
 ```bash
+bash test/docker-e2e/run.sh runtime-verification
+```
+
+To use a custom LLM endpoint (required for live prompt smoke tests in `runtime-verification`):
+```bash
+ollama pull gemma4:e2b
 E2E_LLM_URL=http://localhost:11434/v1 npm run test:docker
 ```
 

@@ -7,7 +7,7 @@ function makeInput(overrides?: Partial<GeneratorInput>): GeneratorInput {
     profile: {
       name: 'claude-code',
       description: 'Claude Code agent',
-      config_target: '~/.claude/settings.json',
+      config_target: '~/.claude.json',
       allowed_servers: ['github'],
       denied_servers: [],
     },
@@ -21,14 +21,19 @@ function makeInput(overrides?: Partial<GeneratorInput>): GeneratorInput {
   }
 }
 
+// Helper: parse the settings.json additionalFile if present
+function getSettingsJson(result: ReturnType<typeof generateClaudeCodeConfig>) {
+  const extra = (result.additionalFiles ?? []).find(f => f.path.endsWith('.claude/settings.json'))
+  return extra ? JSON.parse(extra.content) : null
+}
+
 describe('Claude Code model config', () => {
-  it('should not include env block when no models', () => {
+  it('should not emit a settings.json when no models configured', () => {
     const result = generateClaudeCodeConfig(makeInput())
-    const parsed = JSON.parse(result.content)
-    expect(parsed.env).toBeUndefined()
+    expect(result.additionalFiles).toBeUndefined()
   })
 
-  it('should include env block with model vars when models.default is set', () => {
+  it('should emit settings.json with env block when models.default is set', () => {
     const result = generateClaudeCodeConfig(makeInput({
       models: {
         default: {
@@ -39,10 +44,10 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    expect(parsed.env).toBeDefined()
-    expect(parsed.env.ANTHROPIC_MODEL).toBe('claude-sonnet-4-20250514')
-    expect(parsed.env.ANTHROPIC_API_KEY).toBe('sk-ant-test123')
+    const settings = getSettingsJson(result)
+    expect(settings).toBeTruthy()
+    expect(settings.env.ANTHROPIC_MODEL).toBe('claude-sonnet-4-20250514')
+    expect(settings.env.ANTHROPIC_API_KEY).toBe('sk-ant-test123')
   })
 
   it('should include ANTHROPIC_BASE_URL when base_url is set', () => {
@@ -57,8 +62,8 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    expect(parsed.env.ANTHROPIC_BASE_URL).toBe('https://proxy.example.com/v1')
+    const settings = getSettingsJson(result)
+    expect(settings.env.ANTHROPIC_BASE_URL).toBe('https://proxy.example.com/v1')
   })
 
   it('should set tier-specific model env vars from roles', () => {
@@ -76,10 +81,10 @@ describe('Claude Code model config', () => {
         },
       },
     }))
-    const parsed = JSON.parse(result.content)
-    expect(parsed.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe('claude-sonnet-4-20250514')
-    expect(parsed.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe('claude-opus-4-20250514')
-    expect(parsed.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe('claude-haiku-4-5-20251001')
+    const settings = getSettingsJson(result)
+    expect(settings.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe('claude-sonnet-4-20250514')
+    expect(settings.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe('claude-opus-4-20250514')
+    expect(settings.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe('claude-haiku-4-5-20251001')
   })
 
   it('should let env_inject override model-derived env vars', () => {
@@ -87,7 +92,7 @@ describe('Claude Code model config', () => {
       profile: {
         name: 'claude-code',
         description: 'Claude Code agent',
-        config_target: '~/.claude/settings.json',
+        config_target: '~/.claude.json',
         allowed_servers: [],
         denied_servers: [],
         env_inject: {
@@ -103,12 +108,11 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    // env_inject should win over model-derived value
-    expect(parsed.env.ANTHROPIC_MODEL).toBe('custom-model-override')
+    const settings = getSettingsJson(result)
+    expect(settings.env.ANTHROPIC_MODEL).toBe('custom-model-override')
   })
 
-  it('should still include mcpServers alongside env block', () => {
+  it('should always include mcpServers in the primary file regardless of model config', () => {
     const result = generateClaudeCodeConfig(makeInput({
       models: {
         default: {
@@ -119,10 +123,11 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers).toBeDefined()
-    expect(parsed.mcpServers.fam).toBeDefined()
-    expect(parsed.env).toBeDefined()
+    const main = JSON.parse(result.content)
+    expect(main.mcpServers).toBeDefined()
+    expect(main.mcpServers.fam).toBeDefined()
+    // settings.json is a separate file, not merged into primary
+    expect(main.env).toBeUndefined()
   })
 
   it('should skip env block and warn for non-Anthropic providers', () => {
@@ -137,13 +142,12 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    // Model env vars should NOT be written
-    expect(parsed.env).toBeUndefined()
-    // MCP servers should still be configured
-    expect(parsed.mcpServers).toBeDefined()
-    expect(parsed.mcpServers.fam).toBeDefined()
-    // Should emit a warning
+    // No settings.json generated
+    expect(result.additionalFiles).toBeUndefined()
+    // MCP servers still configured in primary
+    const main = JSON.parse(result.content)
+    expect(main.mcpServers.fam).toBeDefined()
+    // Warning emitted
     expect(result.warnings).toBeDefined()
     expect(result.warnings!.length).toBeGreaterThan(0)
     expect(result.warnings![0]).toContain('openai_compatible')
@@ -161,9 +165,9 @@ describe('Claude Code model config', () => {
         roles: {},
       },
     }))
-    const parsed = JSON.parse(result.content)
-    expect(parsed.env).toBeDefined()
-    expect(parsed.env.ANTHROPIC_MODEL).toBe('anthropic.claude-3-sonnet-20240229-v1:0')
+    const settings = getSettingsJson(result)
+    expect(settings).toBeTruthy()
+    expect(settings.env.ANTHROPIC_MODEL).toBe('anthropic.claude-3-sonnet-20240229-v1:0')
     expect(result.warnings).toBeUndefined()
   })
 })

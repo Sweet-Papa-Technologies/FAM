@@ -7,7 +7,7 @@ function makeInput(overrides?: Partial<GeneratorInput>): GeneratorInput {
     profile: {
       name: 'claude-code',
       description: 'Claude Code agent',
-      config_target: '~/.claude/settings.json',
+      config_target: '~/.claude.json',
       allowed_servers: ['github'],
       denied_servers: [],
     },
@@ -43,16 +43,17 @@ describe('generateClaudeCodeConfig', () => {
     )
   })
 
-  it('should set transport to sse', () => {
+  it('should use type:http (not transport:sse) so Claude Code picks it up', () => {
     const result = generateClaudeCodeConfig(makeInput())
     const parsed = JSON.parse(result.content)
-    expect(parsed.mcpServers.fam.transport).toBe('sse')
+    expect(parsed.mcpServers.fam.type).toBe('http')
+    expect(parsed.mcpServers.fam.transport).toBeUndefined()
   })
 
-  it('should expand tilde in the output path', () => {
+  it('should expand tilde in the output path to ~/.claude.json', () => {
     const result = generateClaudeCodeConfig(makeInput())
     expect(result.path).not.toContain('~')
-    expect(result.path).toContain('.claude/settings.json')
+    expect(result.path.endsWith('.claude.json')).toBe(true)
   })
 
   it('should report format as json', () => {
