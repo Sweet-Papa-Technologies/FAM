@@ -160,7 +160,7 @@ profiles:                       # REQUIRED. Record<string, Profile>.
 # Maps config_target names to output files and formats.
 generators:                     # Optional. Record<string, Generator>.
   <generator-name>:
-    output: ~/.claude/settings.json  # REQUIRED. Output path (supports ~).
+    output: ~/.claude.json  # REQUIRED. Output path (supports ~).
     format: claude_mcp_config        # REQUIRED. Generator format name.
 
 # ─── Native Tools ───────────────────────────────────────────
@@ -428,7 +428,7 @@ Compare generated configs against expected state. Detects unauthorized modificat
 
 | Agent | Format Name | Default Output Path | File Format |
 |---|---|---|---|
-| Claude Code | `claude_mcp_config` | `~/.claude/settings.json` | JSON |
+| Claude Code | `claude_mcp_config` | `~/.claude.json` (+ `~/.claude/settings.json` for env)¹ | JSON |
 | Cursor | `cursor_mcp_config` | `~/.cursor/mcp.json` | JSON |
 | VS Code | `vscode_mcp_config` | `.vscode/mcp.json` | JSON |
 | Windsurf | `windsurf_mcp_config` | `~/.codeium/windsurf/mcp_config.json` | JSON |
@@ -447,6 +447,8 @@ Compare generated configs against expected state. Detects unauthorized modificat
 | Generic | `generic_mcp_list` | `~/.fam/configs/${profile_name}.json` | JSON |
 
 **Important:** The `config_target` in a profile must match a key in the `generators` section, and the generator's `format` must be one of the format names above.
+
+¹ Claude Code 2.x reads MCP config from `~/.claude.json` (top-level `mcpServers`, `type: "http"`) and reads env vars from `~/.claude/settings.json`. FAM writes both files automatically — the settings.json file is emitted as a secondary output via the generator's `additionalFiles` mechanism and is always merged with `import_and_manage` (deep merge, FAM keys win) to preserve any user-added keys.
 
 ---
 
@@ -534,7 +536,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
 ```
 
@@ -598,7 +600,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
   cursor:
     output: ~/.cursor/mcp.json
@@ -653,7 +655,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
 ```
 
@@ -820,7 +822,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
   cursor:
     output: ~/.cursor/mcp.json

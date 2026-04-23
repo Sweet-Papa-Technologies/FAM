@@ -1,6 +1,6 @@
 {
   "name": "@sweetpapatech/fam",
-  "version": "1.0.2",
+  "version": "1.1.2",
   "description": "FoFo Agent Manager — One config. Every agent.",
   "type": "module",
   "bin": {

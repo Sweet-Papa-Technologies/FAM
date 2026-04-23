@@ -93,7 +93,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
 
   opencode:

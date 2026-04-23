@@ -112,7 +112,7 @@ profiles:
 
 generators:
   claude_code:
-    output: ~/.claude/settings.json
+    output: ~/.claude.json
     format: claude_mcp_config
 ```
 
@@ -398,9 +398,9 @@ Exits with code 2 when drift is detected, making it usable in CI pipelines.
 
 FAM ships with config generators for these tools out of the box:
 
-| Tool | Config Target | Generated File | Model Config |
+| Tool | Config Target | Generated File(s) | Model Config |
 |---|---|---|---|
-| Claude Code | `claude_code` | `~/.claude/settings.json` | env block (API key, model, tiers) |
+| Claude Code | `claude_code` | `~/.claude.json` (MCP) + `~/.claude/settings.json` (env block) | env block (API key, model, tiers) |
 | OpenCode | `opencode` | `~/.config/opencode/opencode.json` | providers + agents (coder/task roles) |
 | OpenHands | `openhands` | `~/.openhands/config.toml` | [llm] section |
 | Aider | `aider` | `~/.aider.conf.yml` | model, editor-model, weak-model |

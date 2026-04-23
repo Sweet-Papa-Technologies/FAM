@@ -1,5 +1,7 @@
 # FAM Project Status — Board Update
 
+> **Update — April 21, 2026:** See [Current Status (April 21, 2026)](#current-status-april-21-2026) at the bottom. The original April 6 report is preserved below for history.
+
 **Date:** April 6, 2026
 **Project:** FoFo Agent Manager (FAM)
 **Author:** Forrester Terry
@@ -213,3 +215,72 @@ Developer writes fam.yaml
 ---
 
 *Built with The Way of the FoFo. Designed by human, implemented with AI, validated end-to-end.*
+
+---
+
+## Current Status (April 21, 2026)
+
+This section supersedes the numbers above. Everything in the April 6 report still holds; this adds what shipped since.
+
+### Headline numbers
+
+| Metric | April 6 | April 21 | Delta |
+|---|---|---|---|
+| Unit tests | 379 | **457** | +78 (new runtime harness + per-agent verifiers) |
+| Docker E2E categories | 6 | **7** | +1 (`runtime-verification`) |
+| Agents runtime-verified in CI | 0 | **5** | Claude Code, OpenCode, Gemini CLI, Aider, OpenClaw |
+
+### What changed
+
+**New: runtime-verification test harness.** Previously, Docker E2E only checked that FAM's generator *wrote a file*. It never confirmed the target agent actually read that file and reported FAM as registered. The new `runtime-verification` category:
+
+1. Installs each installable agent in the container (Claude Code, OpenCode, Gemini CLI, Aider, OpenClaw, Amazon Q).
+2. Runs `fam apply --yes`, starts the daemon.
+3. Executes the agent's **own** CLI (`claude mcp list`, `opencode mcp list`, `gemini mcp list --debug`, `openclaw mcp`, etc.) and asserts FAM is visible.
+4. If Ollama is reachable with `gemma4:e2b` pulled, sends one real prompt per compatible agent and asserts a non-empty response.
+
+Result on current build: **5/5 passing, 1 skipped** (Amazon Q — requires AWS SSO, which cannot run hermetically).
+
+### Real bugs the new harness surfaced (and fixed)
+
+Writing the runtime tests turned up two genuine FAM generator bugs that structural "did the file get written" tests missed:
+
+| Bug | Fix |
+|---|---|
+| Claude Code generator wrote MCP config to `~/.claude/settings.json` with `transport: "sse"`. Claude Code 2.x reads MCP config from `~/.claude.json` with `type: "http"`. `claude mcp list` saw nothing. | Added `additionalFiles` to `GeneratorOutput`; generator now writes `~/.claude.json` (mcpServers) + `~/.claude/settings.json` (env). Apply pipeline iterates secondary files with `import_and_manage` merge. |
+| Gemini CLI generator omitted the `type: "http"` field in `mcpServers.fam`. Gemini silently dropped the entry. | One-line fix in `src/generators/gemini-cli.ts`. |
+
+A third issue (aider's `--show-model-settings` flag behavior changed across releases) was a stale test assumption — swapped for a config-file + live-prompt check.
+
+### Known test drift (out of scope, flagged)
+
+Three pre-existing structural tests in `generators` and `model-config` categories assert output shapes that drifted from their generators:
+
+- `generators/generator-windsurf` — expects `mcpServers.fam.url`; generator writes `.serverUrl`
+- `model-config/model-opencode` — expects `agents.coder.model`; generator writes top-level `model`
+- `model-config/model-cline` — expects flat `"cline.apiModelId"` key
+
+These are test maintenance, not functional regressions.
+
+### Support tiers
+
+| Tier | Agents | How they're tested |
+|---|---|---|
+| **Runtime-verified** | Claude Code, OpenCode, Gemini CLI, Aider, OpenClaw | Agent's own CLI confirms FAM is registered; live prompt when Ollama reachable |
+| **Gated runtime-verified** | Amazon Q | Skipped unless `E2E_AMAZONQ_AUTHED=1` (pre-baked SSO cache) |
+| **Experimental (schema-only)** | OpenHands, Continue.dev, NemoClaw, GitHub Copilot CLI, Cursor, VS Code, Windsurf, Zed, Cline, Roo Code, Generic | Generator output checked structurally; agent runtime not exercised |
+
+GUI-only tools (Cursor, VS Code, Windsurf, Zed, Cline, Roo Code) cannot be runtime-verified in a headless container by design.
+
+### Files added/changed in this update
+
+- `test/docker-e2e/lib/runtime-harness.mjs` — shared harness (port alloc, yaml builder, daemon lifecycle, Ollama probe)
+- `test/docker-e2e/tests/runtime-verification.mjs` — new category orchestrator
+- `test/docker-e2e/verifiers/{claude-code,opencode,gemini-cli,aider,openclaw,amazon-q}.mjs` — per-agent verifiers
+- `test/docker-e2e/e2e-config.yaml` — added `runtime_verified_agents` list, switched model_id to `gemma4:e2b`, updated Claude Code output_path
+- `src/generators/types.ts` — added `additionalFiles` to `GeneratorOutput`
+- `src/generators/claude-code.ts` — rewritten for dual-file output
+- `src/generators/gemini-cli.ts` — added `type: "http"` field
+- `src/cli/apply.ts` — writes `additionalFiles` with `import_and_manage` merge
+- `test/unit/generators/claude-code*.test.ts` — rewritten to match new shape
+- `README.md`, `docs/DESIGN.md`, `docs/SKILLS.md`, `docs/user/index.md`, `docs/user/opencode-setup.md` — docs aligned with new Claude Code layout and support tiers

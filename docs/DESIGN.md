@@ -1103,14 +1103,17 @@ async function handleToolCall(profile: string, call: ToolCallRequest): Promise<T
 
 All generators produce a single MCP server entry pointing to FAM. The token is embedded in the URL query param (fallback) or headers (preferred), depending on what the target tool supports.
 
-#### Claude Code (`~/.claude/settings.json`)
+#### Claude Code (dual-file output)
 
+Claude Code 2.x reads MCP servers from `~/.claude.json` (top-level `mcpServers`, entry shape uses `"type": "http"`) and reads env vars from `~/.claude/settings.json`. FAM writes both files; the secondary file is emitted via the generator's `additionalFiles` mechanism and merged with `import_and_manage` to preserve user-added keys.
+
+**Primary: `~/.claude.json`**
 ```json
 {
   "mcpServers": {
     "fam": {
+      "type": "http",
       "url": "http://localhost:7865/mcp",
-      "transport": "sse",
       "headers": {
         "Authorization": "Bearer fam_sk_cld_a1b2c3d4..."
       }
@@ -1118,6 +1121,21 @@ All generators produce a single MCP server entry pointing to FAM. The token is e
   }
 }
 ```
+
+**Secondary (only when a compatible Anthropic model is configured): `~/.claude/settings.json`**
+```json
+{
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-ant-...",
+    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-4-20250514",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-4-20250514",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "claude-haiku-4-5-20251001"
+  }
+}
+```
+
+`claude mcp list` reads the primary file. Claude Code picks up the env block at startup when launched from a shell where those vars are inherited.
 
 #### Cursor (`~/.cursor/mcp.json`)
 

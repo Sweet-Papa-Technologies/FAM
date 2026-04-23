@@ -8,7 +8,8 @@
       "WebFetch(domain:opencode.ai)",
       "Bash(./test.opencode.sh:*)",
       "WebSearch",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npm run *)"
     ]
   }
 }
